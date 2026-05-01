@@ -188,6 +188,7 @@ static int        s_focusField = 0;
 static char       s_errorMsg[128] = {};
 static bool       s_registerOk = false;
 static bool       s_showWelcome = false;
+static bool       s_requestExit = false;
 
 inline void ResetLoginToLanding()
 {
@@ -195,12 +196,18 @@ inline void ResetLoginToLanding()
     s_showWelcome = false;
     s_registerOk = false;
     s_errorMsg[0] = '\0';
+    s_requestExit = false;
     clearText(s_inputUser, 64);
     clearText(s_inputPass, 64);
     clearText(s_inputUser2, 64);
     clearText(s_inputPass2, 64);
     clearText(s_inputPass3, 64);
     s_focusField = 0;
+}
+
+inline bool LoginRequestedExit()
+{
+    return s_requestExit;
 }
 
 static void drawOverlay(int sw, int sh)
@@ -458,6 +465,11 @@ inline int DrawLoginScreen(int sw, int sh)
             clearText(s_inputUser, 64);
             clearText(s_inputPass, 64);
             s_registerOk = false;
+        }
+
+        if (drawOutlineButton("Exit", bx, by + bh + 16, bw, 52))
+        {
+            s_requestExit = true;
         }
 
         return 0;
