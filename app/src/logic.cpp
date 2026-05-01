@@ -2,6 +2,17 @@
 #include <cstring>
 #include <cctype>
 
+static void copyText(char* dst, int dstMax, const char* src)
+{
+    if (dstMax <= 0) return;
+    int i = 0;
+    while (i < dstMax - 1 && src && src[i] != '\0') {
+        dst[i] = src[i];
+        i++;
+    }
+    dst[i] = '\0';
+}
+
 void sortTasksByPriority(Task* tasks, int count, bool ascending)
 {
     for (int i = 0; i < count - 1; i++)
@@ -139,8 +150,8 @@ bool createTask(const char* title, int priority, const char* deadline, int durat
     if (duration < 0)       return false;
 
     Task t = {};
-    strncpy(t.title, title, 127);
-    strncpy(t.deadline, deadline, 15);
+    copyText(t.title, 128, title);
+    copyText(t.deadline, 16, deadline);
     t.priority = priority;
     t.duration = duration;
     t.completed = false;
@@ -161,10 +172,7 @@ bool toggleTaskComplete(int index)
     if (index < 0 || index >= count)
         return false;
 
-    if (store[index].completed == true)
-        store[index].completed = false;
-    else
-        store[index].completed = true;
+    store[index].completed = !store[index].completed;
 
     return true;
 }

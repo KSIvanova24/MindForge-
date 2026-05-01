@@ -79,19 +79,19 @@ void DrawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
 
     DrawRectangle(20, screenHeight - 180, SIDEBAR_W - 40, 1, COLOR_DIVIDER);
 
-    const char* bottomLabels[] = { "My Profile", "Settings" };
-    AppScreen   bottomScreens[] = { SCREEN_PROFILE, SCREEN_SETTINGS };
+    const char* bottomLabels[] = { "My Profile", "Settings", "Logout" };
+    AppScreen   bottomScreens[] = { SCREEN_PROFILE, SCREEN_SETTINGS, SCREEN_LOGOUT };
 
-    int bottomStart = screenHeight - 160;
+    int bottomStart = screenHeight - 160 - (BTN_H + BTN_GAP);
 
-    for (int i = 0; i < 2; i++)
+    for (int i = 0; i < 3; i++)
     {
         int x = BTN_X;
         int y = bottomStart + i * (BTN_H + BTN_GAP);
         int w = BTN_W;
         int h = BTN_H;
 
-        bool isActive = (current == bottomScreens[i]);
+        bool isActive = (bottomScreens[i] != SCREEN_LOGOUT) && (current == bottomScreens[i]);
         bool isHovered = CheckCollisionPointRec(mouse, { (float)x, (float)y, (float)w, (float)h });
 
         if (isHovered)
