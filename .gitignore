@@ -1,22 +1,18 @@
-# Visual Studio
 .vs/
 *.suo
 *.user
 *.sln.docstates
 
-# Precompiled headers
 ipch/
 *.ipch
 *.pch
 
-# Build output
 build/
 x64/
 Debug/
 Release/
 out/
 
-# Compiled files
 *.exe
 *.pdb
 *.ilk
@@ -26,30 +22,25 @@ out/
 *.dll
 *.exp
 
-# CMake
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 CTestTestfile.cmake
 
-# Logs and tlog
 *.tlog
 *.log
 *.lastbuildstate
 
-# Recipe files
 *.recipe
 
-# VS project files (we use CMake instead)
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
 
-# VS index files
 *.vsidx
 *.db
 *.db-shm
 *.db-wal
 
-# VS solution (keep this if you want, remove the line below to keep it)
-# *.sln
+app/library/lib/
+app/library/include/
