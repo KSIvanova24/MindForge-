@@ -1,5 +1,5 @@
 #pragma once
-#include "../pch.h"
+#include "raylib.h"
 
 void DrawProfileScreen(int contentX, int contentWidth, int screenHeight)
 {

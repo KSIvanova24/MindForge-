@@ -1,5 +1,8 @@
 #pragma once
-#include "../pch.h"
+#include "raylib.h"
+#include <cmath>
+#include <cstring>
+#include "../accounts.h"
 
 static int textLen(const char* s)
 {
@@ -203,6 +206,7 @@ inline void ResetLoginToLanding()
     clearText(s_inputPass2, 64);
     clearText(s_inputPass3, 64);
     s_focusField = 0;
+    clearLoggedInUser();
 }
 
 inline bool LoginRequestedExit()
@@ -278,7 +282,11 @@ static bool drawLoginModal(int sw, int sh)
         if (textLen(s_inputUser) == 0 || textLen(s_inputPass) == 0) {
             copyText(s_errorMsg, 128, "Please fill in all fields.");
         }
+        else if (!validateCredentials(s_inputUser, s_inputPass)) {
+            copyText(s_errorMsg, 128, "Invalid username or password.");
+        }
         else {
+            setLoggedInUser(s_inputUser);
             s_modal = MODAL_NONE;
             s_showWelcome = true;
             s_errorMsg[0] = '\0';
@@ -371,6 +379,12 @@ static void drawRegisterModal(int sw, int sh)
         }
         else if (textLen(s_inputPass2) < 4) {
             copyText(s_errorMsg, 128, "Password must be at least 4 characters.");
+        }
+        else if (accountExists(s_inputUser2)) {
+            copyText(s_errorMsg, 128, "Username already taken.");
+        }
+        else if (!registerAccount(s_inputUser2, s_inputPass2)) {
+            copyText(s_errorMsg, 128, "Could not save account.");
         }
         else {
             copyText(s_inputUser, 64, s_inputUser2);

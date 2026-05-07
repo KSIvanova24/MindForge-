@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(SOURCES
     src/main.cpp
     src/presentation.cpp
+    src/accounts.cpp
+    src/data.cpp
+    src/logic.cpp
 )
 
 add_executable(MindForge ${SOURCES})
@@ -35,6 +38,6 @@ else()
 endif()
 
 if(MSVC)
-    target_compile_options(MindForge PRIVATE /W3 /utf-8)
+    target_compile_options(MindForge PRIVATE /W3 /utf-8 /D_CRT_SECURE_NO_WARNINGS)
     set_target_properties(MindForge PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
 endif()
