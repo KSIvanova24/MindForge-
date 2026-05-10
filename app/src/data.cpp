@@ -26,8 +26,15 @@ bool addTask(Task newTask)
     if (s_count >= MAX_TASKS)
         return false;
 
-    newTask.id = s_nextId;
-    s_nextId++;
+    if (newTask.id == 0)
+    {
+        newTask.id = s_nextId;
+        s_nextId++;
+    }
+    else if (newTask.id >= s_nextId)
+    {
+        s_nextId = newTask.id + 1;
+    }
 
     s_tasks[s_count] = newTask;
     s_count++;
