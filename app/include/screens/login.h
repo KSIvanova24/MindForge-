@@ -1,5 +1,6 @@
 #pragma once
 #include "../pch.h"
+#include "../accounts.h"
 
 static int textLen(const char* s)
 {
@@ -192,6 +193,7 @@ static bool       s_requestExit = false;
 
 inline void ResetLoginToLanding()
 {
+    clearLoggedInUser();
     s_modal = MODAL_NONE;
     s_showWelcome = false;
     s_registerOk = false;
@@ -278,7 +280,11 @@ static bool drawLoginModal(int sw, int sh)
         if (textLen(s_inputUser) == 0 || textLen(s_inputPass) == 0) {
             copyText(s_errorMsg, 128, "Please fill in all fields.");
         }
+        else if (!validateCredentials(s_inputUser, s_inputPass)) {
+            copyText(s_errorMsg, 128, "Wrong username or password.");
+        }
         else {
+            setLoggedInUser(s_inputUser);
             s_modal = MODAL_NONE;
             s_showWelcome = true;
             s_errorMsg[0] = '\0';
@@ -371,6 +377,12 @@ static void drawRegisterModal(int sw, int sh)
         }
         else if (textLen(s_inputPass2) < 4) {
             copyText(s_errorMsg, 128, "Password must be at least 4 characters.");
+        }
+        else if (accountExists(s_inputUser2)) {
+            copyText(s_errorMsg, 128, "That username is already taken.");
+        }
+        else if (!registerAccount(s_inputUser2, s_inputPass2)) {
+            copyText(s_errorMsg, 128, "Could not create account. Try again.");
         }
         else {
             copyText(s_inputUser, 64, s_inputUser2);

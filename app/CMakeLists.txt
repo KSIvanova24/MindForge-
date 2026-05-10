@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(MindForge LANGUAGES CXX)
+project(MindForge LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -7,6 +7,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(SOURCES
     src/main.cpp
     src/presentation.cpp
+    src/dashboard.cpp
+    src/accounts.cpp
+    src/db.cpp
+    library/src/sqlite3.c
 )
 
 add_executable(MindForge ${SOURCES})
@@ -35,6 +39,6 @@ else()
 endif()
 
 if(MSVC)
-    target_compile_options(MindForge PRIVATE /W3 /utf-8)
+    target_compile_options(MindForge PRIVATE /W3 /utf-8 /D_CRT_SECURE_NO_WARNINGS)
     set_target_properties(MindForge PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
 endif()
