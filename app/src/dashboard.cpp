@@ -1,4 +1,5 @@
 #include "../include/screens/dashboard.h"
+#include <cstring>
 
 struct Task
 {
