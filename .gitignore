@@ -44,6 +44,7 @@ CTestTestfile.cmake
 
 app/library/lib/
 app/library/include/
+app/library/src/
 
 .claude/
 .vscode/
