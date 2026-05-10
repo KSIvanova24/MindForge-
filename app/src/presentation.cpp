@@ -1,7 +1,8 @@
 #include "../include/presentation.h"
 #include "../include/accounts.h"
+#include "../include/db.h"
 #include "../include/screens/dashboard.h"
-#include "../include/screens/all_tasks.h"
+#include "../include/screens/allTasks.h"
 #include "../include/screens/statistics.h"
 #include "../include/screens/profile.h"
 
@@ -10,7 +11,7 @@
 static bool s_settingsShowDeleteConfirm = false;
 static char s_settingsDeleteErr[128] = {};
 
-bool SettingsDeleteModalIsOpen()
+bool settingsDeleteModalIsOpen()
 {
     return s_settingsShowDeleteConfirm;
 }
@@ -54,7 +55,7 @@ void drawOneButton(const char* label, int x, int y, int w, int h, bool isActive,
     }
 }
 
-void DrawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
+void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
 {
     DrawRectangle(0, 0, SIDEBAR_W, screenHeight, COLOR_SIDEBAR);
     DrawRectangleGradientH(SIDEBAR_W - 10, 0, 10, screenHeight, { 0,0,0,0 }, { 0,0,0,60 });
@@ -111,7 +112,7 @@ void DrawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
     }
 }
 
-static bool settings_drawButton(const char* label, int x, int y, int w, int h, Color base, Color hover)
+static bool settingsDrawButton(const char* label, int x, int y, int w, int h, Color base, Color hover)
 {
     Vector2   mouse = GetMousePosition();
     Rectangle r = { (float)x, (float)y, (float)w, (float)h };
@@ -131,7 +132,7 @@ static bool settings_drawButton(const char* label, int x, int y, int w, int h, C
     return hov && IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 }
 
-static bool settings_drawOutlineButton(const char* label, int x, int y, int w, int h)
+static bool settingsDrawOutlineButton(const char* label, int x, int y, int w, int h)
 {
     Vector2   mouse = GetMousePosition();
     Rectangle r = { (float)x, (float)y, (float)w, (float)h };
@@ -152,7 +153,7 @@ static bool settings_drawOutlineButton(const char* label, int x, int y, int w, i
     return hov && IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 }
 
-void DrawSettingsScreen(int contentX, int contentWidth, int screenHeight, bool* outAccountDeleted)
+void drawSettingsScreen(int contentX, int contentWidth, int screenHeight, bool* outAccountDeleted)
 {
     if (outAccountDeleted)
         *outAccountDeleted = false;
@@ -187,7 +188,7 @@ void DrawSettingsScreen(int contentX, int contentWidth, int screenHeight, bool* 
     int bw = 220;
     int bh = 48;
 
-    if (settings_drawButton("Delete my account", bx, by, bw, bh,
+    if (settingsDrawButton("Delete my account", bx, by, bw, bh,
             Color{ 180, 50, 30, 255 }, Color{ 220, 70, 50, 255 }))
     {
         s_settingsDeleteErr[0] = '\0';
@@ -225,10 +226,11 @@ void DrawSettingsScreen(int contentX, int contentWidth, int screenHeight, bool* 
         int cbx2 = cbx1 + cbw + cgap;
         int cby = py + ph - 82;
 
-        if (settings_drawButton("Delete", cbx1, cby, cbw, cbh,
+        if (settingsDrawButton("Delete", cbx1, cby, cbw, cbh,
                 Color{ 180, 50, 30, 255 }, Color{ 220, 70, 50, 255 }))
         {
             if (user && user[0] != '\0' && deleteAccount(user)) {
+                deleteAllTasksForUser(user);
                 clearLoggedInUser();
                 s_settingsShowDeleteConfirm = false;
                 s_settingsDeleteErr[0] = '\0';
@@ -241,7 +243,7 @@ void DrawSettingsScreen(int contentX, int contentWidth, int screenHeight, bool* 
                 s_settingsShowDeleteConfirm = false;
             }
         }
-        if (settings_drawOutlineButton("Cancel", cbx2, cby, cbw, cbh) || IsKeyPressed(KEY_ESCAPE))
+        if (settingsDrawOutlineButton("Cancel", cbx2, cby, cbw, cbh) || IsKeyPressed(KEY_ESCAPE))
         {
             s_settingsShowDeleteConfirm = false;
         }

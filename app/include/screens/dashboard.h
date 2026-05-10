@@ -1,4 +1,4 @@
 #pragma once
 #include "raylib.h"
 
-void DrawDashboardScreen(int contentX, int contentWidth, int screenHeight);
+void drawDashboardScreen(int contentX, int contentWidth, int screenHeight);

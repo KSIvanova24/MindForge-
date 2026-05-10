@@ -8,6 +8,10 @@ set(SOURCES
     src/main.cpp
     src/presentation.cpp
     src/dashboard.cpp
+    src/allTasks.cpp
+    src/login.cpp
+    src/profile.cpp
+    src/statistics.cpp
     src/accounts.cpp
     src/db.cpp
     src/data.cpp

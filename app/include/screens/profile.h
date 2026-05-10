@@ -1,7 +1,3 @@
 #pragma once
-#include "raylib.h"
 
-void DrawProfileScreen(int contentX, int contentWidth, int screenHeight)
-{
-    DrawRectangle(contentX, 0, contentWidth, screenHeight, RAYWHITE);
-}
+void drawProfileScreen(int contentX, int contentWidth, int screenHeight);

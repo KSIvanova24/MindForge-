@@ -12,12 +12,12 @@ typedef enum {
     SCREEN_LOGOUT
 } AppScreen;
 
-void DrawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight);
+void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight);
 
-bool SettingsDeleteModalIsOpen();
+bool settingsDeleteModalIsOpen();
 
-void DrawDashboardScreen(int contentX, int contentWidth, int screenHeight);
-void DrawAllTasksScreen(int contentX, int contentWidth, int screenHeight);
-void DrawStatisticsScreen(int contentX, int contentWidth, int screenHeight);
-void DrawProfileScreen(int contentX, int contentWidth, int screenHeight);
-void DrawSettingsScreen(int contentX, int contentWidth, int screenHeight, bool* outAccountDeleted);
+void drawDashboardScreen(int contentX, int contentWidth, int screenHeight);
+void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight);
+void drawStatisticsScreen(int contentX, int contentWidth, int screenHeight);
+void drawProfileScreen(int contentX, int contentWidth, int screenHeight);
+void drawSettingsScreen(int contentX, int contentWidth, int screenHeight, bool* outAccountDeleted);

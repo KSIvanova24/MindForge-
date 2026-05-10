@@ -32,8 +32,8 @@ int main(void)
 
         if (appState == 0)
         {
-            int loginResult = DrawLoginScreen(sw, sh);
-            if (LoginRequestedExit())
+            int loginResult = drawLoginScreen(sw, sh);
+            if (loginRequestedExit())
                 break;
             if (loginResult >= 1)
                 appState = loginResult;
@@ -45,18 +45,18 @@ int main(void)
 
             switch (currentScreen)
             {
-            case SCREEN_DASHBOARD:  DrawDashboardScreen(contentX, contentW, sh); break;
-            case SCREEN_ALL_TASKS:  DrawAllTasksScreen(contentX, contentW, sh); break;
-            case SCREEN_STATISTICS: DrawStatisticsScreen(contentX, contentW, sh); break;
-            case SCREEN_PROFILE:    DrawProfileScreen(contentX, contentW, sh); break;
-            case SCREEN_SETTINGS:   DrawSettingsScreen(contentX, contentW, sh, &accountDeletedLogout); break;
+            case SCREEN_DASHBOARD:  drawDashboardScreen(contentX, contentW, sh); break;
+            case SCREEN_ALL_TASKS:  drawAllTasksScreen(contentX, contentW, sh); break;
+            case SCREEN_STATISTICS: drawStatisticsScreen(contentX, contentW, sh); break;
+            case SCREEN_PROFILE:    drawProfileScreen(contentX, contentW, sh); break;
+            case SCREEN_SETTINGS:   drawSettingsScreen(contentX, contentW, sh, &accountDeletedLogout); break;
             default: break;
             }
 
             AppScreen hoveredItem = (AppScreen)-1;
-            DrawSidebar(currentScreen, &hoveredItem, sh);
+            drawSidebar(currentScreen, &hoveredItem, sh);
 
-            if (!showLogoutConfirm && !SettingsDeleteModalIsOpen() && appState == 2 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && (int)hoveredItem >= 0)
+            if (!showLogoutConfirm && !settingsDeleteModalIsOpen() && appState == 2 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && (int)hoveredItem >= 0)
             {
                 if (hoveredItem == SCREEN_LOGOUT)
                 {
@@ -70,7 +70,7 @@ int main(void)
 
             if (appState == 1)
             {
-                int loginResult = DrawLoginScreen(sw, sh);
+                int loginResult = drawLoginScreen(sw, sh);
                 if (loginResult == 2)
                     appState = 2;
             }
@@ -85,7 +85,7 @@ int main(void)
             if (accountDeletedLogout)
             {
                 accountDeletedLogout = false;
-                ResetLoginToLanding();
+                resetLoginToLanding();
                 appState = 0;
                 currentScreen = SCREEN_DASHBOARD;
             }
@@ -117,7 +117,7 @@ int main(void)
                 if (drawButton("Logout", bx1, by, bw, bh, true))
                 {
                     showLogoutConfirm = false;
-                    ResetLoginToLanding();
+                    resetLoginToLanding();
                     appState = 0;
                     currentScreen = SCREEN_DASHBOARD;
                 }
