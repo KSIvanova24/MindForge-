@@ -1,4 +1,3 @@
-#include "../include/pch.h"
 #include "../include/presentation.h"
 #include "../include/screens/login.h"
 
@@ -19,6 +18,7 @@ int main(void)
 
     int appState = 0;
     bool showLogoutConfirm = false;
+    bool accountDeletedLogout = false;
 
     AppScreen currentScreen = SCREEN_DASHBOARD;
 
@@ -49,14 +49,14 @@ int main(void)
             case SCREEN_ALL_TASKS:  DrawAllTasksScreen(contentX, contentW, sh); break;
             case SCREEN_STATISTICS: DrawStatisticsScreen(contentX, contentW, sh); break;
             case SCREEN_PROFILE:    DrawProfileScreen(contentX, contentW, sh); break;
-            case SCREEN_SETTINGS:   DrawSettingsScreen(contentX, contentW, sh); break;
+            case SCREEN_SETTINGS:   DrawSettingsScreen(contentX, contentW, sh, &accountDeletedLogout); break;
             default: break;
             }
 
             AppScreen hoveredItem = (AppScreen)-1;
             DrawSidebar(currentScreen, &hoveredItem, sh);
 
-            if (!showLogoutConfirm && appState == 2 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && (int)hoveredItem >= 0)
+            if (!showLogoutConfirm && !SettingsDeleteModalIsOpen() && appState == 2 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && (int)hoveredItem >= 0)
             {
                 if (hoveredItem == SCREEN_LOGOUT)
                 {
@@ -80,6 +80,14 @@ int main(void)
                     SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
                 else
                     SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+            }
+
+            if (accountDeletedLogout)
+            {
+                accountDeletedLogout = false;
+                ResetLoginToLanding();
+                appState = 0;
+                currentScreen = SCREEN_DASHBOARD;
             }
 
             if (showLogoutConfirm)

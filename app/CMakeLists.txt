@@ -7,10 +7,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(SOURCES
     src/main.cpp
     src/presentation.cpp
+<<<<<<< HEAD
     src/dashboard.cpp
     src/accounts.cpp
     src/db.cpp
     library/src/sqlite3.c
+=======
+    src/accounts.cpp
+    src/data.cpp
+    src/logic.cpp
+>>>>>>> 5fd3af9016514b25366d6d2b9968150c9c312e9e
 )
 
 add_executable(MindForge ${SOURCES})

@@ -1,5 +1,11 @@
 #pragma once
+<<<<<<< HEAD
 #include "../pch.h"
+=======
+#include "raylib.h"
+#include <cmath>
+#include <cstring>
+>>>>>>> 5fd3af9016514b25366d6d2b9968150c9c312e9e
 #include "../accounts.h"
 
 static int textLen(const char* s)
@@ -205,6 +211,7 @@ inline void ResetLoginToLanding()
     clearText(s_inputPass2, 64);
     clearText(s_inputPass3, 64);
     s_focusField = 0;
+    clearLoggedInUser();
 }
 
 inline bool LoginRequestedExit()
@@ -281,7 +288,11 @@ static bool drawLoginModal(int sw, int sh)
             copyText(s_errorMsg, 128, "Please fill in all fields.");
         }
         else if (!validateCredentials(s_inputUser, s_inputPass)) {
+<<<<<<< HEAD
             copyText(s_errorMsg, 128, "Wrong username or password.");
+=======
+            copyText(s_errorMsg, 128, "Invalid username or password.");
+>>>>>>> 5fd3af9016514b25366d6d2b9968150c9c312e9e
         }
         else {
             setLoggedInUser(s_inputUser);
@@ -379,10 +390,17 @@ static void drawRegisterModal(int sw, int sh)
             copyText(s_errorMsg, 128, "Password must be at least 4 characters.");
         }
         else if (accountExists(s_inputUser2)) {
+<<<<<<< HEAD
             copyText(s_errorMsg, 128, "That username is already taken.");
         }
         else if (!registerAccount(s_inputUser2, s_inputPass2)) {
             copyText(s_errorMsg, 128, "Could not create account. Try again.");
+=======
+            copyText(s_errorMsg, 128, "Username already taken.");
+        }
+        else if (!registerAccount(s_inputUser2, s_inputPass2)) {
+            copyText(s_errorMsg, 128, "Could not save account.");
+>>>>>>> 5fd3af9016514b25366d6d2b9968150c9c312e9e
         }
         else {
             copyText(s_inputUser, 64, s_inputUser2);
