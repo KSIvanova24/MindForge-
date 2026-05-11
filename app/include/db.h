@@ -4,14 +4,16 @@
 
 sqlite3* openDatabase();
 
-int loadTasksForUser(const char* username);
-
-int saveNewTask(const char* username, const Task& task);
-
+int  loadTasksForUser(const char* username);
+int  saveNewTask(const char* username, const Task& task);
 bool updateTaskCompleted(int taskId, bool completed);
-
 bool updateTaskDeadline(int taskId, const char* deadline);
-
+bool updateTaskDescription(int taskId, const char* description);
+bool updateTaskRepeat(int taskId, int repeatType, int repeatInterval);
+bool updateTaskCategory(int taskId, const char* categoryName);
 bool deleteTaskFromDb(int taskId);
-
 bool deleteAllTasksForUser(const char* username);
+
+int  loadCategoriesForUser(const char* username);
+int  saveNewCategory(const char* username, const char* name);
+bool deleteCategoryFromDb(int categoryId);

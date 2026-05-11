@@ -31,12 +31,21 @@ target_include_directories(MindForge PRIVATE
 )
 
 if(WIN32)
-    target_link_libraries(MindForge PRIVATE
-        ${CMAKE_SOURCE_DIR}/library/lib/raylib.lib
-        winmm
-        gdi32
-        opengl32
-    )
+    if(MINGW)
+        target_link_libraries(MindForge PRIVATE
+            ${CMAKE_SOURCE_DIR}/library/lib/libraylibdll.a
+            winmm
+            gdi32
+            opengl32
+        )
+    else()
+        target_link_libraries(MindForge PRIVATE
+            ${CMAKE_SOURCE_DIR}/library/lib/raylib.lib
+            winmm
+            gdi32
+            opengl32
+        )
+    endif()
 
     add_custom_command(TARGET MindForge POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different

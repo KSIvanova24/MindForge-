@@ -277,6 +277,7 @@ static bool drawLoginModal(int sw, int sh)
         else {
             setLoggedInUser(s_inputUser);
             loadTasksForUser(s_inputUser);
+            loadCategoriesForUser(s_inputUser);
             s_modal = MODAL_NONE;
             s_showWelcome = true;
             s_errorMsg[0] = '\0';
