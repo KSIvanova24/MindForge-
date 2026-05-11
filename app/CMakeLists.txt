@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 project(MindForge LANGUAGES C CXX)
 
+set(CMAKE_SUPPRESS_REGENERATION true)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -8,7 +11,7 @@ set(SOURCES
     src/main.cpp
     src/presentation.cpp
     src/dashboard.cpp
-    src/allTasks.cpp
+    src/tasks.cpp
     src/login.cpp
     src/profile.cpp
     src/statistics.cpp
@@ -24,6 +27,7 @@ add_executable(MindForge ${SOURCES})
 target_include_directories(MindForge PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/library/include
+    ${CMAKE_SOURCE_DIR}/library/src
 )
 
 if(WIN32)
