@@ -66,6 +66,8 @@ sqlite3* openDatabase()
         ");";
     sqlite3_exec(db, createCategoriesTable, nullptr, nullptr, nullptr);
 
+    sqlite3_exec(db, "ALTER TABLE categories ADD COLUMN color TEXT NOT NULL DEFAULT '#E46C0F';", nullptr, nullptr, nullptr);
+
     return db;
 }
 
@@ -374,7 +376,7 @@ int loadCategoriesForUser(const char* username)
         return 0;
 
     const char* sql =
-        "SELECT id, name FROM categories WHERE username = ? ORDER BY name ASC;";
+        "SELECT id, name, color FROM categories WHERE username = ? ORDER BY name ASC;";
 
     sqlite3_stmt* statement = nullptr;
     int prepareResult = sqlite3_prepare_v2(db, sql, -1, &statement, nullptr);
@@ -395,6 +397,8 @@ int loadCategoriesForUser(const char* username)
         cat.id = sqlite3_column_int(statement, 0);
         copyTextColumn(cat.name, sizeof(cat.name),
                        sqlite3_column_text(statement, 1));
+        copyTextColumn(cat.color, sizeof(cat.color),
+                       sqlite3_column_text(statement, 2));
 
         addCategoryToStore(cat);
         rowsLoaded = rowsLoaded + 1;
@@ -405,7 +409,7 @@ int loadCategoriesForUser(const char* username)
     return rowsLoaded;
 }
 
-int saveNewCategory(const char* username, const char* name)
+int saveNewCategory(const char* username, const char* name, const char* color)
 {
     if (!username || username[0] == '\0')
         return 0;
@@ -416,7 +420,7 @@ int saveNewCategory(const char* username, const char* name)
     if (!db)
         return 0;
 
-    const char* sql = "INSERT INTO categories (username, name) VALUES (?, ?);";
+    const char* sql = "INSERT INTO categories (username, name, color) VALUES (?, ?, ?);";
 
     sqlite3_stmt* statement = nullptr;
     if (sqlite3_prepare_v2(db, sql, -1, &statement, nullptr) != SQLITE_OK)
@@ -427,6 +431,7 @@ int saveNewCategory(const char* username, const char* name)
 
     sqlite3_bind_text(statement, 1, username, -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(statement, 2, name,     -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(statement, 3, color,    -1, SQLITE_TRANSIENT);
 
     sqlite3_step(statement);
 
@@ -435,6 +440,42 @@ int saveNewCategory(const char* username, const char* name)
     sqlite3_finalize(statement);
     sqlite3_close(db);
     return newId;
+}
+
+bool updateCategoryColor(int categoryId, const char* color)
+{
+    sqlite3* database = openDatabase();
+
+    bool databaseOpened = (database != nullptr);
+    if (databaseOpened == false)
+    {
+        return false;
+    }
+
+    const char* sql = "UPDATE categories SET color = ? WHERE id = ?;";
+
+    sqlite3_stmt* statement = nullptr;
+    int prepareResult = sqlite3_prepare_v2(database, sql, -1, &statement, nullptr);
+
+    bool prepareSucceeded = (prepareResult == SQLITE_OK);
+    if (prepareSucceeded == false)
+    {
+        sqlite3_close(database);
+        return false;
+    }
+
+    sqlite3_bind_text(statement, 1, color,      -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int (statement, 2, categoryId);
+
+    sqlite3_step(statement);
+
+    int numberOfRowsChanged = sqlite3_changes(database);
+
+    sqlite3_finalize(statement);
+    sqlite3_close(database);
+
+    bool updateWorked = (numberOfRowsChanged > 0);
+    return updateWorked;
 }
 
 bool deleteCategoryFromDb(int categoryId)

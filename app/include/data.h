@@ -21,6 +21,7 @@ struct Category
 {
     int  id;
     char name[64];
+    char color[8];
 };
 
 void      initTaskStore();

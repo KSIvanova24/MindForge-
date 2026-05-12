@@ -44,6 +44,48 @@ Color COLOR_WHITE    = { 255, 255, 255, 255 };
 Color COLOR_GREY     = { 180, 160, 140, 255 };
 Color COLOR_DOT_IDLE = { 120, 100,  80, 255 };
 
+static int s_newCategoryColorIndex = 0;
+
+static Color parseHexColor(const char* hexString)
+{
+    Color resultColor = { 234, 108, 15, 255 };
+
+    bool hexStringIsValid = (hexString != nullptr && hexString[0] == '#');
+    if (hexStringIsValid == false)
+    {
+        return resultColor;
+    }
+
+    char redChars[3];
+    redChars[0] = hexString[1];
+    redChars[1] = hexString[2];
+    redChars[2] = '\0';
+
+    char greenChars[3];
+    greenChars[0] = hexString[3];
+    greenChars[1] = hexString[4];
+    greenChars[2] = '\0';
+
+    char blueChars[3];
+    blueChars[0] = hexString[5];
+    blueChars[1] = hexString[6];
+    blueChars[2] = '\0';
+
+    int redValue   = 0;
+    int greenValue = 0;
+    int blueValue  = 0;
+
+    sscanf(redChars,   "%x", &redValue);
+    sscanf(greenChars, "%x", &greenValue);
+    sscanf(blueChars,  "%x", &blueValue);
+
+    resultColor.r = (unsigned char)redValue;
+    resultColor.g = (unsigned char)greenValue;
+    resultColor.b = (unsigned char)blueValue;
+
+    return resultColor;
+}
+
 bool settingsDeleteModalIsOpen()
 {
     return s_deleteConfirmIsOpen;
@@ -201,6 +243,12 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
             }
 
             bool catIsActive = (strcmp(currentFilter, categoryList[catIndex].name) == 0);
+
+            Color categoryDotColor = parseHexColor(categoryList[catIndex].color);
+            int   dotCenterX       = BTN_X + 56;
+            int   dotCenterY       = itemY + dropdownItemH / 2;
+            DrawCircle(dotCenterX, dotCenterY, 5, categoryDotColor);
+
             drawDropdownItem(categoryList[catIndex].name, BTN_X + 8, itemY, BTN_W - 8, dropdownItemH, catIsActive, mouseOverCat, true);
 
             itemY = itemY + dropdownItemH;
@@ -254,6 +302,43 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
                 DrawText(s_newCategoryNameBuf, inputBoxX + 10, inputBoxY + 10, 15, COLOR_WHITE);
             }
 
+            const char* colorChoices[5] = { "#E46C0F", "#50C864", "#5A8CDC", "#DC503C", "#9B59B6" };
+
+            int colorCircleY       = inputBoxY + inputBoxH + 8;
+            int colorCircleRadius  = 9;
+            int colorCircleSpacing = 26;
+
+            int colorIndex = 0;
+            while (colorIndex < 5)
+            {
+                int circleX = inputBoxX + 14 + colorIndex * colorCircleSpacing;
+
+                Color circleColor = parseHexColor(colorChoices[colorIndex]);
+                DrawCircle(circleX, colorCircleY + colorCircleRadius, colorCircleRadius, circleColor);
+
+                bool thisColorIsSelected = (s_newCategoryColorIndex == colorIndex);
+                if (thisColorIsSelected == true)
+                {
+                    DrawCircleLines(circleX, colorCircleY + colorCircleRadius, colorCircleRadius + 2, COLOR_WHITE);
+                }
+
+                Vector2 mousePos   = GetMousePosition();
+                float   distanceX  = (float)(mousePos.x - circleX);
+                float   distanceY  = (float)(mousePos.y - (colorCircleY + colorCircleRadius));
+                float   distanceSq = distanceX * distanceX + distanceY * distanceY;
+                float   radiusSq   = (float)(colorCircleRadius * colorCircleRadius);
+
+                bool mouseIsOverCircle = (distanceSq <= radiusSq);
+                bool mouseWasClicked   = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+
+                if (mouseIsOverCircle == true && mouseWasClicked == true)
+                {
+                    s_newCategoryColorIndex = colorIndex;
+                }
+
+                colorIndex = colorIndex + 1;
+            }
+
             int typedChar = GetCharPressed();
             while (typedChar > 0)
             {
@@ -273,8 +358,9 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
 
             if (IsKeyPressed(KEY_ENTER) && nameLen > 0)
             {
+                const char* colorChoices[5] = { "#E46C0F", "#50C864", "#5A8CDC", "#DC503C", "#9B59B6" };
                 const char* loggedInUser = getLoggedInUser();
-                int newId = saveNewCategory(loggedInUser, s_newCategoryNameBuf);
+                int newId = saveNewCategory(loggedInUser, s_newCategoryNameBuf, colorChoices[s_newCategoryColorIndex]);
                 if (newId > 0)
                 {
                     Category freshCategory = {};
@@ -288,9 +374,18 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
                     }
                     freshCategory.name[copyIndex] = '\0';
 
+                    int colorCopyIndex = 0;
+                    while (colorCopyIndex < 7 && colorChoices[s_newCategoryColorIndex][colorCopyIndex] != '\0')
+                    {
+                        freshCategory.color[colorCopyIndex] = colorChoices[s_newCategoryColorIndex][colorCopyIndex];
+                        colorCopyIndex = colorCopyIndex + 1;
+                    }
+                    freshCategory.color[colorCopyIndex] = '\0';
+
                     addCategoryToStore(freshCategory);
                     s_newCategoryNameBuf[0] = '\0';
                     s_showNewCategoryInput  = false;
+                    s_newCategoryColorIndex = 0;
                 }
             }
 
@@ -298,6 +393,7 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
             {
                 s_newCategoryNameBuf[0] = '\0';
                 s_showNewCategoryInput  = false;
+                s_newCategoryColorIndex = 0;
             }
         }
     }

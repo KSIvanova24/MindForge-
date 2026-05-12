@@ -15,5 +15,6 @@ bool deleteTaskFromDb(int taskId);
 bool deleteAllTasksForUser(const char* username);
 
 int  loadCategoriesForUser(const char* username);
-int  saveNewCategory(const char* username, const char* name);
+int  saveNewCategory(const char* username, const char* name, const char* color);
+bool updateCategoryColor(int categoryId, const char* color);
 bool deleteCategoryFromDb(int categoryId);
