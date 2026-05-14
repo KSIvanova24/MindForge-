@@ -50,6 +50,7 @@ static char  atNewError[128]     = {};
 static int   atNewRepeatType     = 0;
 static char  atNewRepeatDays[8]  = {};
 static int   atNewCategoryIndex  = -1;
+static int   atSortMode          = 0;
 
 static int   atExpandedTaskIndex       = -1;
 static bool  atIsEditingDescription    = false;
@@ -944,7 +945,22 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
     if (atDrawPill("Heatmap", viewX + viewBtnW + 8, pillY, pillH, atView == ATV_HEATMAP, nullptr))
         atView = ATV_HEATMAP;
 
-    int searchY = pillY + pillH + 12;
+    int sortPillY = pillY + pillH + 8;
+    int sortPillH = 28;
+    int sortPillX = innerX;
+
+    const char* sortLabels[4] = { "Deadline", "Priority", "Title", "Duration" };
+    int sortIndex = 0;
+    while (sortIndex < 4)
+    {
+        int sortPillW = 0;
+        if (atDrawPill(sortLabels[sortIndex], sortPillX, sortPillY, sortPillH, atSortMode == sortIndex, &sortPillW))
+            atSortMode = sortIndex;
+        sortPillX = sortPillX + sortPillW + 8;
+        sortIndex = sortIndex + 1;
+    }
+
+    int searchY = sortPillY + sortPillH + 12;
     atDrawSearchBox(innerX, searchY, innerW - 280, 38);
 
     Task* tasks      = getTaskStore();
@@ -1055,8 +1071,27 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
                 int b = a + 1;
                 while (b < bn[g])
                 {
-                    if (strcmp(tasks[buckets[g][a]].deadline,
-                               tasks[buckets[g][b]].deadline) > 0)
+                    int sortDifference = 0;
+                    if (atSortMode == 0)
+                    {
+                        sortDifference = strcmp(tasks[buckets[g][a]].deadline,
+                                                tasks[buckets[g][b]].deadline);
+                    }
+                    else if (atSortMode == 1)
+                    {
+                        sortDifference = tasks[buckets[g][b]].priority - tasks[buckets[g][a]].priority;
+                    }
+                    else if (atSortMode == 2)
+                    {
+                        sortDifference = strcmp(tasks[buckets[g][a]].title,
+                                                tasks[buckets[g][b]].title);
+                    }
+                    else if (atSortMode == 3)
+                    {
+                        sortDifference = tasks[buckets[g][a]].duration - tasks[buckets[g][b]].duration;
+                    }
+
+                    if (sortDifference > 0)
                     {
                         int tmp       = buckets[g][a];
                         buckets[g][a] = buckets[g][b];

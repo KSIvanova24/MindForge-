@@ -226,11 +226,45 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
         int numberOfCategories = getCategoryCount();
         Category* categoryList = getCategoryStore();
 
+        bool categoryClickedThisFrame = false;
+
         int catIndex = 0;
         while (catIndex < numberOfCategories)
         {
             Rectangle catArea = { (float)(BTN_X + 8), (float)itemY, (float)(BTN_W - 8), (float)dropdownItemH };
             bool mouseOverCat = CheckCollisionPointRec(mousePosition, catArea);
+
+            int  deleteBtnSize = 18;
+            int  deleteBtnX    = BTN_X + BTN_W - deleteBtnSize - 8;
+            int  deleteBtnY    = itemY + (dropdownItemH - deleteBtnSize) / 2;
+            Rectangle deleteBtnArea = { (float)deleteBtnX, (float)deleteBtnY, (float)deleteBtnSize, (float)deleteBtnSize };
+            bool mouseOverDeleteBtn = CheckCollisionPointRec(mousePosition, deleteBtnArea);
+
+            if (mouseOverDeleteBtn == true && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+            {
+                char deletedCategoryName[64] = {};
+                int  nameCharIndex = 0;
+                while (nameCharIndex < 63 && categoryList[catIndex].name[nameCharIndex] != '\0')
+                {
+                    deletedCategoryName[nameCharIndex] = categoryList[catIndex].name[nameCharIndex];
+                    nameCharIndex = nameCharIndex + 1;
+                }
+                deletedCategoryName[nameCharIndex] = '\0';
+
+                deleteCategoryFromDb(categoryList[catIndex].id);
+                removeCategoryAtIndex(catIndex);
+
+                bool deletedCategoryWasActive = (strcmp(currentFilter, deletedCategoryName) == 0);
+                if (deletedCategoryWasActive == true)
+                {
+                    setCurrentCategoryFilter("");
+                }
+
+                numberOfCategories = getCategoryCount();
+                categoryList       = getCategoryStore();
+                categoryClickedThisFrame = true;
+                continue;
+            }
 
             if (mouseOverCat == true)
             {
@@ -240,16 +274,27 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
             {
                 setCurrentCategoryFilter(categoryList[catIndex].name);
                 *outHovered = SCREEN_ALL_TASKS;
+                categoryClickedThisFrame = true;
             }
 
             bool catIsActive = (strcmp(currentFilter, categoryList[catIndex].name) == 0);
+
+            drawDropdownItem(categoryList[catIndex].name, BTN_X + 8, itemY, BTN_W - 8, dropdownItemH, catIsActive, mouseOverCat, true);
 
             Color categoryDotColor = parseHexColor(categoryList[catIndex].color);
             int   dotCenterX       = BTN_X + 56;
             int   dotCenterY       = itemY + dropdownItemH / 2;
             DrawCircle(dotCenterX, dotCenterY, 5, categoryDotColor);
 
-            drawDropdownItem(categoryList[catIndex].name, BTN_X + 8, itemY, BTN_W - 8, dropdownItemH, catIsActive, mouseOverCat, true);
+            if (mouseOverCat == true)
+            {
+                Color deleteBtnColor = { 120, 80, 80, 255 };
+                if (mouseOverDeleteBtn == true)
+                {
+                    deleteBtnColor = { 220, 60, 60, 255 };
+                }
+                DrawText("x", deleteBtnX + 5, deleteBtnY + 3, 14, deleteBtnColor);
+            }
 
             itemY = itemY + dropdownItemH;
             catIndex = catIndex + 1;
@@ -261,7 +306,7 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
         {
             *outHovered = (AppScreen)(-2);
         }
-        if (mouseOverNewList == true && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        if (mouseOverNewList == true && categoryClickedThisFrame == false && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         {
             s_showNewCategoryInput = !s_showNewCategoryInput;
             if (s_showNewCategoryInput == false)
@@ -270,8 +315,7 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
             }
         }
 
-        Color newListColor = mouseOverNewList ? COLOR_ACCENT : COLOR_GREY;
-        DrawText("+ New List", BTN_X + 68, itemY + dropdownItemH / 2 - 9, 18, newListColor);
+        drawDropdownItem("+ New List", BTN_X + 8, itemY, BTN_W - 8, dropdownItemH, s_showNewCategoryInput, mouseOverNewList, true);
 
         itemY = itemY + dropdownItemH;
 
@@ -390,6 +434,17 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
             }
 
             if (IsKeyPressed(KEY_ESCAPE))
+            {
+                s_newCategoryNameBuf[0] = '\0';
+                s_showNewCategoryInput  = false;
+                s_newCategoryColorIndex = 0;
+            }
+
+            int formAreaBottom = colorCircleY + colorCircleRadius * 2 + 8;
+            Rectangle formBoundingRect = { (float)BTN_X, (float)(inputBoxY - 4), (float)BTN_W, (float)(formAreaBottom - inputBoxY + 4) };
+            bool mouseInsideForm    = CheckCollisionPointRec(mousePosition, formBoundingRect);
+            bool mouseInsideNewList = CheckCollisionPointRec(mousePosition, newListArea);
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && mouseInsideForm == false && mouseInsideNewList == false)
             {
                 s_newCategoryNameBuf[0] = '\0';
                 s_showNewCategoryInput  = false;
