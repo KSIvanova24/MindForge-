@@ -30,8 +30,6 @@ Task*     getTaskStore();
 bool      addTask(Task t);
 bool      removeTask(int index);
 bool      updateTask(int index, Task t);
-int       loadTasksFromFile(const char* filepath);
-bool      saveTasksToFile(const char* filepath);
 
 void      initCategoryStore();
 int       getCategoryCount();

@@ -1,5 +1,4 @@
 #include "../include/data.h"
-#include <cstdio>
 
 static Task s_tasks[MAX_TASKS];
 static int  s_count  = 0;
@@ -70,65 +69,6 @@ bool updateTask(int index, Task updatedTask)
 
     updatedTask.id = s_tasks[index].id;
     s_tasks[index] = updatedTask;
-    return true;
-}
-
-int loadTasksFromFile(const char* filepath)
-{
-    FILE* file = fopen(filepath, "r");
-    if (!file)
-        return -1;
-
-    initTaskStore();
-
-    Task t = {};
-    int  completedAsInt = 0;
-
-    while (s_count < MAX_TASKS)
-    {
-        int fieldsRead = fscanf(file, "%d,%127[^,],%d,%15[^,],%d,%d\n",
-                                &t.id, t.title, &t.priority,
-                                t.deadline, &t.duration, &completedAsInt);
-        if (fieldsRead != 6)
-            break;
-
-        t.completed      = (completedAsInt == 1);
-        t.description[0] = '\0';
-        t.categoryName[0]= '\0';
-        t.repeatType     = 0;
-        t.repeatInterval = 0;
-
-        s_tasks[s_count] = t;
-        s_count = s_count + 1;
-
-        if (t.id >= s_nextId)
-            s_nextId = t.id + 1;
-    }
-
-    fclose(file);
-    return s_count;
-}
-
-bool saveTasksToFile(const char* filepath)
-{
-    FILE* file = fopen(filepath, "w");
-    if (!file)
-        return false;
-
-    int i = 0;
-    while (i < s_count)
-    {
-        fprintf(file, "%d,%s,%d,%s,%d,%d\n",
-                s_tasks[i].id,
-                s_tasks[i].title,
-                s_tasks[i].priority,
-                s_tasks[i].deadline,
-                s_tasks[i].duration,
-                (int)s_tasks[i].completed);
-        i = i + 1;
-    }
-
-    fclose(file);
     return true;
 }
 
