@@ -5,6 +5,9 @@
 #include "raylib.h"
 #include <cmath>
 #include <cstring>
+#include <ctime>
+#include <cstdio>
+#include "../include/logic.h"
 
 static int textLen(const char* s)
 {
@@ -365,7 +368,7 @@ static void drawRegisterModal(int sw, int sh)
         if (textLen(s_inputUser2) == 0 || textLen(s_inputPass2) == 0 || textLen(s_inputPass3) == 0) {
             copyText(s_errorMsg, 128, "Please fill in all fields.");
         }
-        else if (strcmp(s_inputPass2, s_inputPass3) != 0) {
+        else if (textsAreEqual(s_inputPass2, s_inputPass3) == false) {
             copyText(s_errorMsg, 128, "Passwords do not match.");
         }
         else if (textLen(s_inputPass2) < 4) {
@@ -418,13 +421,79 @@ static bool drawWelcomePopup(int sw, int sh)
 
     DrawText("\xE2\x98\x85", px + pw / 2 - 14, py + 22, 28, LG_ORANGE_LT);
 
-    const char* line1 = "Welcome to TaskDash";
-    int l1s = 24;
-    DrawText(line1, px + pw / 2 - MeasureText(line1, l1s) / 2, py + 64, l1s, LG_GREY);
+    time_t timeNow = time(nullptr);
+    struct tm* timeInfo = localtime(&timeNow);
+    int currentHour = timeInfo->tm_hour;
 
-    const char* line3 = "You're all set. Let's get things done.";
-    int l3s = 17;
-    DrawText(line3, px + pw / 2 - MeasureText(line3, l3s) / 2, py + 120, l3s, LG_DARKGREY);
+    char greetingWord[32] = {};
+    if (currentHour < 12)
+    {
+        copyText(greetingWord, "Good morning");
+    }
+    else if (currentHour < 18)
+    {
+        copyText(greetingWord, "Good afternoon");
+    }
+    else
+    {
+        copyText(greetingWord, "Good evening");
+    }
+
+    const char* usernameNow = getLoggedInUser();
+    char personalGreeting[160] = {};
+    int greetingPos = 0;
+    greetingPos = appendText(personalGreeting, greetingPos, greetingWord);
+    greetingPos = appendText(personalGreeting, greetingPos, ", ");
+    greetingPos = appendText(personalGreeting, greetingPos, usernameNow);
+    greetingPos = appendText(personalGreeting, greetingPos, "!");
+
+    int greetingFontSize = 24;
+    int greetingTextWidth = MeasureText(personalGreeting, greetingFontSize);
+    DrawText(personalGreeting, px + pw / 2 - greetingTextWidth / 2, py + 64, greetingFontSize, LG_WHITE);
+
+    int todayYear  = timeInfo->tm_year + 1900;
+    int todayMonth = timeInfo->tm_mon + 1;
+    int todayDay   = timeInfo->tm_mday;
+
+    char todayDateString[16] = {};
+    buildDateText(todayDateString, todayYear, todayMonth, todayDay);
+
+    Task* allTasks   = getTaskStore();
+    int   totalTasks = getTaskCount();
+    int   tasksDueToday = 0;
+
+    int taskIndex = 0;
+    while (taskIndex < totalTasks)
+    {
+        bool notCompleted = (allTasks[taskIndex].completed == false);
+        bool dueToday = textsAreEqual(allTasks[taskIndex].deadline, todayDateString);
+        if (notCompleted == true && dueToday == true)
+        {
+            tasksDueToday = tasksDueToday + 1;
+        }
+        taskIndex = taskIndex + 1;
+    }
+
+    char subLine[80] = {};
+    int subLinePos = 0;
+    if (tasksDueToday == 0)
+    {
+        subLinePos = appendText(subLine, subLinePos, "No tasks due today. Enjoy your day!");
+    }
+    else if (tasksDueToday == 1)
+    {
+        subLinePos = appendText(subLine, subLinePos, "You have 1 task due today. Let's go!");
+    }
+    else
+    {
+        subLinePos = appendText(subLine, subLinePos, "You have ");
+        subLinePos = appendNumber(subLine, subLinePos, tasksDueToday);
+        subLinePos = appendText(subLine, subLinePos, " tasks due today. Let's go!");
+    }
+
+    int subLineSize  = 17;
+    int subLineWidth = MeasureText(subLine, subLineSize);
+    DrawText(subLine, px + pw / 2 - subLineWidth / 2, py + 106, subLineSize, LG_GREY);
 
     int bw = 140, bh = 48;
     int bx = px + pw / 2 - bw / 2;

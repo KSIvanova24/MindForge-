@@ -2,6 +2,7 @@
 #include "../include/data.h"
 #include "raylib.h"
 #include <cstdio>
+#include "../include/logic.h"
 
 void drawStatisticsScreen(int contentX, int contentWidth, int screenHeight)
 {
@@ -87,7 +88,9 @@ void drawStatisticsScreen(int contentX, int contentWidth, int screenHeight)
     }
 
     char percentText[8] = {};
-    snprintf(percentText, sizeof(percentText), "%d%%", completionPercent);
+    int percentPos = 0;
+    percentPos = appendNumber(percentText, percentPos, completionPercent);
+    percentPos = appendText(percentText, percentPos, "%");
     int percentTextWidth = MeasureText(percentText, 26);
     DrawText(percentText, donutCenterX - percentTextWidth / 2, donutCenterY - 13, 26, white);
 

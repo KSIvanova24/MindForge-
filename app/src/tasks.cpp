@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include "../include/logic.h"
 
 static const Color AT_BG        = {  22,  18,  14, 255 };
 static const Color AT_PANEL     = {  35,  28,  20, 255 };
@@ -94,26 +95,35 @@ static int atDaysFromToday(const char* deadline)
 static const char* atTodayStr()
 {
     static char buf[16];
-    time_t now  = time(NULL);
-    struct tm t = *localtime(&now);
-    snprintf(buf, sizeof(buf), "%04d-%02d-%02d",
-             t.tm_year + 1900, t.tm_mon + 1, t.tm_mday);
+    time_t now     = time(NULL);
+    struct tm t    = *localtime(&now);
+    int todayYear  = t.tm_year + 1900;
+    int todayMonth = t.tm_mon + 1;
+    int todayDay   = t.tm_mday;
+    buildDateText(buf, todayYear, todayMonth, todayDay);
     return buf;
 }
 
 static void atAddDaysToDeadline(char* deadline, int days)
 {
-    int y = 0, m = 0, d = 0;
-    if (sscanf(deadline, "%d-%d-%d", &y, &m, &d) != 3)
+    int year  = 0;
+    int month = 0;
+    int day   = 0;
+    bool parseSucceeded = parseDateText(deadline, &year, &month, &day);
+    if (parseSucceeded == false)
+    {
         return;
-    struct tm t  = {};
-    t.tm_year    = y - 1900;
-    t.tm_mon     = m - 1;
-    t.tm_mday    = d + days;
-    t.tm_hour    = 12;
-    mktime(&t);
-    snprintf(deadline, 16, "%04d-%02d-%02d",
-             t.tm_year + 1900, t.tm_mon + 1, t.tm_mday);
+    }
+    struct tm dateInfo = {};
+    dateInfo.tm_year   = year - 1900;
+    dateInfo.tm_mon    = month - 1;
+    dateInfo.tm_mday   = day + days;
+    dateInfo.tm_hour   = 12;
+    mktime(&dateInfo);
+    int newYear  = dateInfo.tm_year + 1900;
+    int newMonth = dateInfo.tm_mon + 1;
+    int newDay   = dateInfo.tm_mday;
+    buildDateText(deadline, newYear, newMonth, newDay);
 }
 
 static void atSnoozeOneDay(char* deadline)
@@ -199,7 +209,7 @@ static bool atMatchesCategory(const Task& t)
     const char* filter = getCurrentCategoryFilter();
     if (filter[0] == '\0')
         return true;
-    return strcmp(t.categoryName, filter) == 0;
+    return textsAreEqual(t.categoryName, filter);
 }
 
 enum AT_Group { ATG_OVERDUE, ATG_TODAY, ATG_WEEK, ATG_LATER, ATG_DONE, ATG_COUNT };
@@ -300,7 +310,7 @@ static void atDrawSearchBox(int x, int y, int w, int h)
 
     DrawText("Search", x + 14, y + h / 2 - 8, 16, AT_DARK);
 
-    int len   = (int)strlen(atSearchBuf);
+    int len   = textLength(atSearchBuf);
     int textX = x + 14 + MeasureText("Search   ", 16);
     if (len == 0 && !atSearchFocused)
     {
@@ -523,8 +533,18 @@ static int atDrawTaskRow(int taskIdx, int x, int y, int w, float alpha, bool isE
     DrawText(t.deadline, x + w - 200, y + rowH / 2 - 8, 16, dlCol);
     if (overdue)
     {
-        char od[32];
-        snprintf(od, sizeof(od), "%d day%s overdue", -days, (-days) == 1 ? "" : "s");
+        char od[32] = {};
+        int odPos = 0;
+        int daysOverdue = -days;
+        odPos = appendNumber(od, odPos, daysOverdue);
+        if (daysOverdue == 1)
+        {
+            odPos = appendText(od, odPos, " day overdue");
+        }
+        else
+        {
+            odPos = appendText(od, odPos, " days overdue");
+        }
         Color rd = AT_RED;
         rd.a = (unsigned char)(rd.a * alpha);
         DrawText(od, x + w - 200, y + rowH / 2 + 8, 12, rd);
@@ -748,8 +768,10 @@ static void atDrawStreakFlame(int x, int y)
         DrawText("No streak yet", x, y + 6, 16, AT_DARK);
         return;
     }
-    char buf[32];
-    snprintf(buf, sizeof(buf), "%d-day streak", atStreak);
+    char buf[32] = {};
+    int bufPos = 0;
+    bufPos = appendNumber(buf, bufPos, atStreak);
+    bufPos = appendText(buf, bufPos, "-day streak");
     DrawCircle(x + 12, y + 14, 10, AT_ORANGE);
     DrawCircle(x + 12, y + 10,  8, AT_ORANGE_LT);
     DrawCircle(x + 12, y + 8,   4, AT_WHITE);
@@ -870,13 +892,32 @@ static void atDrawHeatCell(int x, int y, int w, int h,
         int pr   = (t.priority >= 1 && t.priority <= 3) ? t.priority : 1;
         Color dot = AT_PRIO_COLOR[pr];
         DrawCircle(x + 18, rowY + 8, 4, dot);
-        char clipped[64];
-        snprintf(clipped, sizeof(clipped), "%.40s", t.title);
+        char clipped[64] = {};
+        int clipIndex = 0;
+        while (clipIndex < 40 && t.title[clipIndex] != '\0')
+        {
+            clipped[clipIndex] = t.title[clipIndex];
+            clipIndex = clipIndex + 1;
+        }
+        clipped[clipIndex] = '\0';
         DrawText(clipped, x + 30, rowY, 14, AT_WHITE);
-        char tail[32];
-        if (days < 0)       snprintf(tail, sizeof(tail), "%dd late", -days);
-        else if (days == 0) snprintf(tail, sizeof(tail), "today");
-        else                snprintf(tail, sizeof(tail), "%dd", days);
+        char tail[32] = {};
+        int tailPos = 0;
+        if (days < 0)
+        {
+            int daysLate = -days;
+            tailPos = appendNumber(tail, tailPos, daysLate);
+            tailPos = appendText(tail, tailPos, "d late");
+        }
+        else if (days == 0)
+        {
+            tailPos = appendText(tail, tailPos, "today");
+        }
+        else
+        {
+            tailPos = appendNumber(tail, tailPos, days);
+            tailPos = appendText(tail, tailPos, "d");
+        }
         DrawText(tail, x + w - 60, rowY, 13, AT_GREY);
         rowY  = rowY + 26;
         shown = shown + 1;
@@ -888,8 +929,12 @@ static void atDrawHeatCell(int x, int y, int w, int h,
     }
     else if (shown < n)
     {
-        char more[32];
-        snprintf(more, sizeof(more), "+%d more", n - shown);
+        char more[32] = {};
+        int morePos = 0;
+        int moreCount = n - shown;
+        morePos = appendText(more, morePos, "+");
+        morePos = appendNumber(more, morePos, moreCount);
+        morePos = appendText(more, morePos, " more");
         DrawText(more, x + 18, rowY, 13, AT_DARK);
     }
 }
@@ -909,11 +954,11 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
     char pageTitle[128];
     if (categoryFilter[0] == '\0')
     {
-        snprintf(pageTitle, sizeof(pageTitle), "All Tasks");
+        copyText(pageTitle, "All Tasks");
     }
     else
     {
-        snprintf(pageTitle, sizeof(pageTitle), "%s", categoryFilter);
+        copyText(pageTitle, categoryFilter);
     }
 
     DrawText(pageTitle, innerX, margin, 32, AT_WHITE);
@@ -978,9 +1023,17 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
     if (quickCount > 0)
     {
         DrawCircle(hintX + 10, hintY + 10, 6, AT_GREEN);
-        char hint[64];
-        snprintf(hint, sizeof(hint), "%d quick task%s right now",
-                 quickCount, quickCount == 1 ? "" : "s");
+        char hint[64] = {};
+        int hintPos = 0;
+        hintPos = appendNumber(hint, hintPos, quickCount);
+        if (quickCount == 1)
+        {
+            hintPos = appendText(hint, hintPos, " quick task right now");
+        }
+        else
+        {
+            hintPos = appendText(hint, hintPos, " quick tasks right now");
+        }
         DrawText(hint, hintX + 24, hintY + 2, 16, AT_GREEN);
     }
     else
@@ -997,8 +1050,10 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
         Rectangle br = { (float)innerX, (float)bulkY, (float)innerW, (float)bulkH };
         DrawRectangleRounded(br, 0.18f, 8, AT_PANEL_LT);
         DrawRectangleRoundedLines(br, 0.18f, 8, 1.5f, AT_ORANGE);
-        char selTxt[32];
-        snprintf(selTxt, sizeof(selTxt), "%d selected", sel);
+        char selTxt[32] = {};
+        int selTxtPos = 0;
+        selTxtPos = appendNumber(selTxt, selTxtPos, sel);
+        selTxtPos = appendText(selTxt, selTxtPos, " selected");
         DrawText(selTxt, innerX + 16, bulkY + bulkH / 2 - 9, 18, AT_WHITE);
         int bw = 130, bh = 32;
         int bx = innerX + innerW - bw * 4 - 24;
@@ -1074,8 +1129,8 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
                     int sortDifference = 0;
                     if (atSortMode == 0)
                     {
-                        sortDifference = strcmp(tasks[buckets[g][a]].deadline,
-                                                tasks[buckets[g][b]].deadline);
+                        sortDifference = compareTexts(tasks[buckets[g][a]].deadline,
+                                                     tasks[buckets[g][b]].deadline);
                     }
                     else if (atSortMode == 1)
                     {
@@ -1083,8 +1138,8 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
                     }
                     else if (atSortMode == 2)
                     {
-                        sortDifference = strcmp(tasks[buckets[g][a]].title,
-                                                tasks[buckets[g][b]].title);
+                        sortDifference = compareTexts(tasks[buckets[g][a]].title,
+                                                     tasks[buckets[g][b]].title);
                     }
                     else if (atSortMode == 3)
                     {
@@ -1127,8 +1182,12 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
             Color hcol = AT_ORANGE_LT;
             if (g == ATG_OVERDUE) hcol = AT_RED;
             if (g == ATG_DONE)    hcol = AT_DARK;
-            char hdr[64];
-            snprintf(hdr, sizeof(hdr), "%s  (%d)", AT_GROUP_LABELS[g], bn[g]);
+            char hdr[64] = {};
+            int hdrPos = 0;
+            hdrPos = appendText(hdr, hdrPos, AT_GROUP_LABELS[g]);
+            hdrPos = appendText(hdr, hdrPos, "  (");
+            hdrPos = appendNumber(hdr, hdrPos, bn[g]);
+            hdrPos = appendText(hdr, hdrPos, ")");
             DrawText(hdr, innerX, curY, 18, hcol);
             DrawRectangle(innerX, curY + 28, innerW, 1, AT_BORDER);
             curY = curY + 40;
@@ -1252,7 +1311,7 @@ static void atOpenAddModal()
         int i = 0;
         while (i < count)
         {
-            if (strcmp(cats[i].name, currentFilter) == 0)
+            if (textsAreEqual(cats[i].name, currentFilter) == true)
             {
                 atNewCategoryIndex = i;
                 break;
@@ -1263,8 +1322,10 @@ static void atOpenAddModal()
 
     time_t tt      = time(NULL) + 7 * 24 * 3600;
     struct tm tm_  = *localtime(&tt);
-    snprintf(atNewDeadline, sizeof(atNewDeadline), "%04d-%02d-%02d",
-             tm_.tm_year + 1900, tm_.tm_mon + 1, tm_.tm_mday);
+    int newDeadlineYear  = tm_.tm_year + 1900;
+    int newDeadlineMonth = tm_.tm_mon + 1;
+    int newDeadlineDay   = tm_.tm_mday;
+    buildDateText(atNewDeadline, newDeadlineYear, newDeadlineMonth, newDeadlineDay);
 }
 
 static bool atDrawTextField(const char* label, char* buf, int bufMax,
@@ -1281,7 +1342,7 @@ static bool atDrawTextField(const char* label, char* buf, int bufMax,
     DrawRectangleRounded(r, 0.25f, 8, focused ? AT_PANEL_LT : AT_PANEL);
     DrawRectangleRoundedLines(r, 0.25f, 8, 1.5f, focused ? AT_ORANGE : AT_BORDER);
 
-    int len = (int)strlen(buf);
+    int len = textLength(buf);
     if (len == 0 && !focused)
     {
         DrawText(placeholder, x + 12, y + h / 2 - 9, 16, AT_DARK);
@@ -1434,23 +1495,23 @@ static void atDrawAddModal(int sw, int sh)
     {
         if (atNewTitle[0] == '\0')
         {
-            snprintf(atNewError, sizeof(atNewError), "Please enter a title.");
+            copyText(atNewError, "Please enter a title.");
         }
-        else if (strlen(atNewDeadline) != 10 ||
+        else if (textLength(atNewDeadline) != 10 ||
                  atNewDeadline[4] != '-' ||
                  atNewDeadline[7] != '-')
         {
-            snprintf(atNewError, sizeof(atNewError), "Deadline must look like YYYY-MM-DD.");
+            copyText(atNewError, "Deadline must look like YYYY-MM-DD.");
         }
         else if (atNewRepeatType == 4 && atNewRepeatDays[0] == '\0')
         {
-            snprintf(atNewError, sizeof(atNewError), "Enter how many days between repeats.");
+            copyText(atNewError, "Enter how many days between repeats.");
         }
         else
         {
             Task newTask = {};
-            snprintf(newTask.title,    sizeof(newTask.title),    "%s", atNewTitle);
-            snprintf(newTask.deadline, sizeof(newTask.deadline), "%s", atNewDeadline);
+            copyText(newTask.title,    atNewTitle);
+            copyText(newTask.deadline, atNewDeadline);
             newTask.priority  = atNewPriority;
             newTask.duration  = atoi(atNewDuration);
             newTask.completed = false;
@@ -1492,7 +1553,7 @@ static void atDrawAddModal(int sw, int sh)
             }
             else
             {
-                snprintf(atNewError, sizeof(atNewError), "Could not save task. Try again.");
+                copyText(atNewError, "Could not save task. Try again.");
             }
         }
     }

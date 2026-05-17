@@ -10,6 +10,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include "../include/logic.h"
 
 static bool s_deleteConfirmIsOpen    = false;
 static char s_deleteErrorMessage[128] = {};
@@ -254,7 +255,7 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
                 deleteCategoryFromDb(categoryList[catIndex].id);
                 removeCategoryAtIndex(catIndex);
 
-                bool deletedCategoryWasActive = (strcmp(currentFilter, deletedCategoryName) == 0);
+                bool deletedCategoryWasActive = textsAreEqual(currentFilter, deletedCategoryName);
                 if (deletedCategoryWasActive == true)
                 {
                     setCurrentCategoryFilter("");
@@ -277,7 +278,7 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
                 categoryClickedThisFrame = true;
             }
 
-            bool catIsActive = (strcmp(currentFilter, categoryList[catIndex].name) == 0);
+            bool catIsActive = textsAreEqual(currentFilter, categoryList[catIndex].name);
 
             drawDropdownItem(categoryList[catIndex].name, BTN_X + 8, itemY, BTN_W - 8, dropdownItemH, catIsActive, mouseOverCat, true);
 
@@ -631,11 +632,13 @@ void drawSettingsScreen(int contentX, int contentWidth, int screenHeight, bool* 
     char signedInLine[96];
     if (currentUsername != nullptr && currentUsername[0] != '\0')
     {
-        snprintf(signedInLine, sizeof(signedInLine), "Signed in as:  %s", currentUsername);
+        int signedInPos = 0;
+        signedInPos = appendText(signedInLine, signedInPos, "Signed in as:  ");
+        signedInPos = appendText(signedInLine, signedInPos, currentUsername);
     }
     else
     {
-        snprintf(signedInLine, sizeof(signedInLine), "Signed in as:  -");
+        copyText(signedInLine, "Signed in as:  -");
     }
     DrawText(signedInLine, formLeftEdge, 90, 18, greyColor);
 
@@ -670,17 +673,17 @@ void drawSettingsScreen(int contentX, int contentWidth, int screenHeight, bool* 
 
         if (newUsernameLength == 0)
         {
-            strcpy(s_usernameResultMessage, "Enter a new username.");
+            copyText(s_usernameResultMessage, "Enter a new username.");
             s_usernameChangeSucceeded = false;
         }
         else if (newUsernameLength < 3)
         {
-            strcpy(s_usernameResultMessage, "Username must be at least 3 characters.");
+            copyText(s_usernameResultMessage, "Username must be at least 3 characters.");
             s_usernameChangeSucceeded = false;
         }
-        else if (strcmp(s_newUsernameText, currentUsername) == 0)
+        else if (textsAreEqual(s_newUsernameText, currentUsername) == true)
         {
-            strcpy(s_usernameResultMessage, "That is already your username.");
+            copyText(s_usernameResultMessage, "That is already your username.");
             s_usernameChangeSucceeded = false;
         }
         else
@@ -689,13 +692,13 @@ void drawSettingsScreen(int contentX, int contentWidth, int screenHeight, bool* 
 
             if (changeWorked == false)
             {
-                strcpy(s_usernameResultMessage, "Username already taken.");
+                copyText(s_usernameResultMessage, "Username already taken.");
                 s_usernameChangeSucceeded = false;
             }
             else
             {
                 setLoggedInUser(s_newUsernameText);
-                strcpy(s_usernameResultMessage, "Username updated!");
+                copyText(s_usernameResultMessage, "Username updated!");
                 s_usernameChangeSucceeded = true;
                 s_newUsernameText[0]      = '\0';
                 s_focusedInputBox         = -1;
@@ -782,17 +785,17 @@ void drawSettingsScreen(int contentX, int contentWidth, int screenHeight, bool* 
 
         if (currentPasswordLength == 0 || newPasswordLength == 0 || confirmPasswordLength == 0)
         {
-            strcpy(s_passwordResultMessage, "Please fill in all fields.");
+            copyText(s_passwordResultMessage, "Please fill in all fields.");
             s_passwordChangeSucceeded = false;
         }
         else if (newPasswordLength < 4)
         {
-            strcpy(s_passwordResultMessage, "New password must be at least 4 characters.");
+            copyText(s_passwordResultMessage, "New password must be at least 4 characters.");
             s_passwordChangeSucceeded = false;
         }
-        else if (strcmp(s_newPasswordText, s_confirmPasswordText) != 0)
+        else if (textsAreEqual(s_newPasswordText, s_confirmPasswordText) == false)
         {
-            strcpy(s_passwordResultMessage, "New passwords do not match.");
+            copyText(s_passwordResultMessage, "New passwords do not match.");
             s_passwordChangeSucceeded = false;
         }
         else
@@ -801,12 +804,12 @@ void drawSettingsScreen(int contentX, int contentWidth, int screenHeight, bool* 
 
             if (changeWorked == false)
             {
-                strcpy(s_passwordResultMessage, "Current password is incorrect.");
+                copyText(s_passwordResultMessage, "Current password is incorrect.");
                 s_passwordChangeSucceeded = false;
             }
             else
             {
-                strcpy(s_passwordResultMessage, "Password updated!");
+                copyText(s_passwordResultMessage, "Password updated!");
                 s_passwordChangeSucceeded = true;
                 s_currentPasswordText[0]  = '\0';
                 s_newPasswordText[0]      = '\0';
@@ -853,7 +856,7 @@ void drawSettingsScreen(int contentX, int contentWidth, int screenHeight, bool* 
         bool noUserIsLoggedIn = (currentUsername == nullptr || currentUsername[0] == '\0');
         if (noUserIsLoggedIn == true)
         {
-            snprintf(s_deleteErrorMessage, sizeof(s_deleteErrorMessage), "No active account.");
+            copyText(s_deleteErrorMessage, "No active account.");
         }
         else
         {
@@ -960,7 +963,7 @@ void drawSettingsScreen(int contentX, int contentWidth, int screenHeight, bool* 
             }
             else
             {
-                snprintf(s_deleteErrorMessage, sizeof(s_deleteErrorMessage), "Could not remove account.");
+                copyText(s_deleteErrorMessage, "Could not remove account.");
                 s_deleteConfirmIsOpen = false;
             }
         }

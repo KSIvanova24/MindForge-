@@ -4,6 +4,7 @@
 #include <cstring>
 #include <ctime>
 #include <cstdio>
+#include "../include/logic.h"
 
 void drawDashboardScreen(int contentX, int contentWidth, int screenHeight)
 {
@@ -84,7 +85,9 @@ void drawDashboardScreen(int contentX, int contentWidth, int screenHeight)
     }
 
     char progressLabelText[32] = {};
-    snprintf(progressLabelText, sizeof(progressLabelText), "%d%% complete", completionPercent);
+    int progressLabelPos = 0;
+    progressLabelPos = appendNumber(progressLabelText, progressLabelPos, completionPercent);
+    progressLabelPos = appendText(progressLabelText, progressLabelPos, "% complete");
     int progressLabelW = MeasureText(progressLabelText, 15);
     DrawText(progressLabelText, progressBarX + progressBarW - progressLabelW, progressBarY - 20, 15, grey);
 
@@ -94,7 +97,7 @@ void drawDashboardScreen(int contentX, int contentWidth, int screenHeight)
     int currentYear = localTimePtr->tm_year + 1900;
     int currentMonth = localTimePtr->tm_mon + 1;
     int currentDay = localTimePtr->tm_mday;
-    snprintf(todayDateString, sizeof(todayDateString), "%04d-%02d-%02d", currentYear, currentMonth, currentDay);
+    buildDateText(todayDateString, currentYear, currentMonth, currentDay);
 
     int dueTodaySectionY = progressBarY + progressBarH + 24;
     DrawText("Due Today", contentX + margin, dueTodaySectionY, 22, orangeBright);
@@ -107,7 +110,7 @@ void drawDashboardScreen(int contentX, int contentWidth, int screenHeight)
     while (searchIndex < totalCount)
     {
         bool taskIsNotCompleted = (tasks[searchIndex].completed == false);
-        bool deadlineMatchesToday = (strcmp(tasks[searchIndex].deadline, todayDateString) == 0);
+        bool deadlineMatchesToday = textsAreEqual(tasks[searchIndex].deadline, todayDateString);
         if (taskIsNotCompleted == true && deadlineMatchesToday == true)
         {
             dueTodayIndices[dueTodayCount] = searchIndex;
@@ -190,7 +193,7 @@ void drawDashboardScreen(int contentX, int contentWidth, int screenHeight)
         {
             const char* thisDeadline = tasks[pendingIndices[innerSortIndex]].deadline;
             const char* nextDeadline = tasks[pendingIndices[innerSortIndex + 1]].deadline;
-            if (strcmp(thisDeadline, nextDeadline) > 0)
+            if (compareTexts(thisDeadline, nextDeadline) > 0)
             {
                 int temp = pendingIndices[innerSortIndex];
                 pendingIndices[innerSortIndex] = pendingIndices[innerSortIndex + 1];
