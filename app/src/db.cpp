@@ -68,6 +68,15 @@ sqlite3* openDatabase()
 
     sqlite3_exec(db, "ALTER TABLE categories ADD COLUMN color TEXT NOT NULL DEFAULT '#E46C0F';", nullptr, nullptr, nullptr);
 
+    const char* createSubtasksTable =
+        "CREATE TABLE IF NOT EXISTS subtasks ("
+        "    id        INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "    task_id   INTEGER NOT NULL,"
+        "    title     TEXT    NOT NULL,"
+        "    completed INTEGER NOT NULL DEFAULT 0"
+        ");";
+    sqlite3_exec(db, createSubtasksTable, nullptr, nullptr, nullptr);
+
     return db;
 }
 
@@ -494,6 +503,120 @@ bool deleteCategoryFromDb(int categoryId)
     }
 
     sqlite3_bind_int(statement, 1, categoryId);
+
+    sqlite3_step(statement);
+    int rowsTouched = sqlite3_changes(db);
+
+    sqlite3_finalize(statement);
+    sqlite3_close(db);
+    return rowsTouched > 0;
+}
+
+int loadSubtasksForTask(int taskId, int* idsOut, char titlesOut[][64], bool* doneOut, int maxCount)
+{
+    sqlite3* db = openDatabase();
+    if (!db)
+        return 0;
+
+    const char* sql =
+        "SELECT id, title, completed FROM subtasks WHERE task_id = ? ORDER BY id ASC;";
+
+    sqlite3_stmt* statement = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &statement, nullptr) != SQLITE_OK)
+    {
+        sqlite3_close(db);
+        return 0;
+    }
+
+    sqlite3_bind_int(statement, 1, taskId);
+
+    int count = 0;
+    while (sqlite3_step(statement) == SQLITE_ROW && count < maxCount)
+    {
+        idsOut[count] = sqlite3_column_int(statement, 0);
+        copyTextColumn(titlesOut[count], 64, sqlite3_column_text(statement, 1));
+        doneOut[count] = (sqlite3_column_int(statement, 2) != 0);
+        count = count + 1;
+    }
+
+    sqlite3_finalize(statement);
+    sqlite3_close(db);
+    return count;
+}
+
+int saveSubtask(int taskId, const char* title)
+{
+    if (!title || title[0] == '\0')
+        return 0;
+
+    sqlite3* db = openDatabase();
+    if (!db)
+        return 0;
+
+    const char* sql = "INSERT INTO subtasks (task_id, title, completed) VALUES (?, ?, 0);";
+
+    sqlite3_stmt* statement = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &statement, nullptr) != SQLITE_OK)
+    {
+        sqlite3_close(db);
+        return 0;
+    }
+
+    sqlite3_bind_int (statement, 1, taskId);
+    sqlite3_bind_text(statement, 2, title, -1, SQLITE_TRANSIENT);
+
+    sqlite3_step(statement);
+
+    int newId = (int)sqlite3_last_insert_rowid(db);
+
+    sqlite3_finalize(statement);
+    sqlite3_close(db);
+    return newId;
+}
+
+bool updateSubtaskCompleted(int subtaskId, bool completed)
+{
+    sqlite3* db = openDatabase();
+    if (!db)
+        return false;
+
+    const char* sql = "UPDATE subtasks SET completed = ? WHERE id = ?;";
+
+    sqlite3_stmt* statement = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &statement, nullptr) != SQLITE_OK)
+    {
+        sqlite3_close(db);
+        return false;
+    }
+
+    sqlite3_bind_int(statement, 1, completed ? 1 : 0);
+    sqlite3_bind_int(statement, 2, subtaskId);
+
+    sqlite3_step(statement);
+
+    int rowsTouched = sqlite3_changes(db);
+
+    sqlite3_finalize(statement);
+    sqlite3_close(db);
+    return rowsTouched > 0;
+}
+
+bool deleteSubtask(int subtaskId)
+{
+    sqlite3* db = openDatabase();
+    if (!db)
+        return false;
+
+    const char* sql = "DELETE FROM subtasks WHERE id = ?;";
+
+    sqlite3_stmt* statement = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &statement, nullptr) != SQLITE_OK)
+    {
+        sqlite3_close(db);
+        return false;
+    }
+
+    sqlite3_bind_int(statement, 1, subtaskId);
 
     sqlite3_step(statement);
     int rowsTouched = sqlite3_changes(db);

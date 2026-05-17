@@ -61,6 +61,18 @@ static int   atExpandedTaskIndex       = -1;
 static bool  atIsEditingDescription    = false;
 static char  atDescriptionEditBuffer[512] = {};
 
+static const int AT_MAX_SUBTASKS = 12;
+static int   atSubtaskParentTaskId             = -1;
+static int   atSubtaskCount                    = 0;
+static int   atSubtaskIds[AT_MAX_SUBTASKS]     = {};
+static char  atSubtaskTitles[AT_MAX_SUBTASKS][64] = {};
+static bool  atSubtaskDone[AT_MAX_SUBTASKS]    = {};
+static char  atSubtaskNewTitle[64]             = {};
+static bool  atSubtaskInputFocused             = false;
+
+static float atTimerSeconds[MAX_TASKS] = {};
+static bool  atTimerRunning[MAX_TASKS] = {};
+
 static const char* AT_PRIO_LABEL[] = { "?", "Low", "Med", "High" };
 static Color       AT_PRIO_COLOR[] = { AT_GREY, AT_GREEN, AT_ORANGE_LT, AT_RED };
 
@@ -182,6 +194,48 @@ static void atBumpStreakOnComplete()
         atStreak = 1;
     }
     atLastCompleteDay = today;
+}
+
+static void atLoadSubtasks(int taskId)
+{
+    atSubtaskParentTaskId = taskId;
+    atSubtaskCount        = loadSubtasksForTask(taskId, atSubtaskIds, atSubtaskTitles, atSubtaskDone, AT_MAX_SUBTASKS);
+    atSubtaskNewTitle[0]  = '\0';
+    atSubtaskInputFocused = false;
+}
+
+static void atFormatTimer(float totalSeconds, char* buf)
+{
+    int wholeSeconds = (int)totalSeconds;
+    int hours        = wholeSeconds / 3600;
+    int minutes      = (wholeSeconds % 3600) / 60;
+    int seconds      = wholeSeconds % 60;
+
+    int pos = 0;
+
+    if (hours > 0)
+    {
+        pos        = appendNumber(buf, pos, hours);
+        buf[pos]   = ':';
+        pos        = pos + 1;
+    }
+
+    if (minutes < 10)
+    {
+        buf[pos] = '0';
+        pos      = pos + 1;
+    }
+    pos      = appendNumber(buf, pos, minutes);
+    buf[pos] = ':';
+    pos      = pos + 1;
+
+    if (seconds < 10)
+    {
+        buf[pos] = '0';
+        pos      = pos + 1;
+    }
+    pos      = appendNumber(buf, pos, seconds);
+    buf[pos] = '\0';
 }
 
 static void atSpawnConfetti(int centerX, int centerY)
@@ -838,6 +892,7 @@ static int atDrawTaskRow(int taskIdx, int x, int y, int w, float alpha, bool isE
         updateTaskCompleted(t.id, true);
         atSpawnRepeatCopy(t);
         atSpawnConfetti(doneX + doneSz / 2, doneY + doneSz / 2);
+        atTimerRunning[taskIdx] = false;
     }
     else if (atClickIn(doneR) && t.completed)
     {
@@ -856,6 +911,7 @@ static int atDrawTaskRow(int taskIdx, int x, int y, int w, float alpha, bool isE
         {
             atExpandedTaskIndex    = -1;
             atIsEditingDescription = false;
+            atSubtaskInputFocused  = false;
         }
         else
         {
@@ -869,29 +925,37 @@ static int atDrawTaskRow(int taskIdx, int x, int y, int w, float alpha, bool isE
 
     if (isExpanded == true)
     {
-        int panelX  = x;
-        int panelY  = y + rowH + 2;
-        int panelW  = w;
+        if (atSubtaskParentTaskId != t.id)
+        {
+            atLoadSubtasks(t.id);
+        }
+
+        int panelX       = x;
+        int panelY       = y + rowH + 2;
+        int panelW       = w;
         int descFontSize = 15;
         int textAreaW    = panelW - 32;
 
-        int panelH = 0;
-
+        int descSectionH = 0;
         if (atIsEditingDescription == true && atExpandedTaskIndex == taskIdx)
         {
-            panelH = 136;
+            descSectionH = 136;
         }
         else if (t.description[0] != '\0')
         {
             int wrappedLines = atCountWrappedLines(t.description, textAreaW, descFontSize);
             if (wrappedLines < 1) wrappedLines = 1;
             int textBlockH   = wrappedLines * (descFontSize + 4) + 8;
-            panelH = textBlockH + 52;
+            descSectionH = textBlockH + 52;
         }
         else
         {
-            panelH = 50;
+            descSectionH = 50;
         }
+
+        int subtaskSectionH = 24 + atSubtaskCount * 30 + 44;
+        int timerSectionH   = 48;
+        int panelH = descSectionH + 12 + subtaskSectionH + 12 + timerSectionH + 12;
 
         DrawRectangleRounded(
             { (float)panelX, (float)panelY, (float)panelW, (float)panelH },
@@ -936,7 +1000,7 @@ static int atDrawTaskRow(int taskIdx, int x, int y, int w, float alpha, bool isE
                 DrawRectangle(cx + 2, editBoxY + 10, 2, descFontSize, AT_ORANGE_LT);
             }
 
-            if (!atSearchFocused && !atShowAddModal)
+            if (!atSearchFocused && !atSubtaskInputFocused && !atShowAddModal)
             {
                 int typedChar = GetCharPressed();
                 while (typedChar > 0)
@@ -990,7 +1054,7 @@ static int atDrawTaskRow(int taskIdx, int x, int y, int w, float alpha, bool isE
             atDrawWrappedText(t.description, panelX + 16, panelY + 10,
                               textAreaW, descFontSize, AT_GREY);
 
-            int editBtnY = panelY + panelH - 42;
+            int editBtnY = panelY + descSectionH - 42;
             if (atDrawGhostBtn("Edit description", panelX + 16, editBtnY, 160, 32))
             {
                 int copyLen = 0;
@@ -1010,6 +1074,7 @@ static int atDrawTaskRow(int taskIdx, int x, int y, int w, float alpha, bool isE
 
                 atIsEditingDescription = true;
                 atSearchFocused        = false;
+                atSubtaskInputFocused  = false;
             }
         }
         else
@@ -1019,7 +1084,186 @@ static int atDrawTaskRow(int taskIdx, int x, int y, int w, float alpha, bool isE
                 atDescriptionEditBuffer[0] = '\0';
                 atIsEditingDescription     = true;
                 atSearchFocused            = false;
+                atSubtaskInputFocused      = false;
             }
+        }
+
+        int divider1Y = panelY + descSectionH + 6;
+        DrawRectangle(panelX + 16, divider1Y, panelW - 32, 1, AT_BORDER);
+
+        int stStartY = divider1Y + 10;
+
+        DrawText("Subtasks", panelX + 16, stStartY, 14, AT_GREY);
+
+        int stDoneCount = 0;
+        int stIndex     = 0;
+        while (stIndex < atSubtaskCount)
+        {
+            if (atSubtaskDone[stIndex] == true)
+            {
+                stDoneCount = stDoneCount + 1;
+            }
+            stIndex = stIndex + 1;
+        }
+
+        char stCountBuf[16] = {};
+        int  stCountPos     = 0;
+        stCountPos = appendNumber(stCountBuf, stCountPos, stDoneCount);
+        stCountPos = appendText(stCountBuf, stCountPos, "/");
+        stCountPos = appendNumber(stCountBuf, stCountPos, atSubtaskCount);
+        DrawText(stCountBuf, panelX + 94, stStartY, 14, AT_ORANGE_LT);
+
+        stStartY = stStartY + 24;
+
+        stIndex = 0;
+        while (stIndex < atSubtaskCount)
+        {
+            int stItemY = stStartY + stIndex * 30;
+
+            int stCbSz = 16;
+            int stCbX  = panelX + 16;
+            Rectangle stCbR = { (float)stCbX, (float)(stItemY + 2), (float)stCbSz, (float)stCbSz };
+            bool stCbHov    = atHoverIn(stCbR);
+
+            Color stCbBorder = AT_DARK;
+            if (atSubtaskDone[stIndex] == true)
+            {
+                stCbBorder = AT_GREEN;
+            }
+            else if (stCbHov == true)
+            {
+                stCbBorder = AT_ORANGE;
+            }
+            DrawRectangleRoundedLines(stCbR, 0.25f, 8, 1.5f, stCbBorder);
+
+            if (atSubtaskDone[stIndex] == true)
+            {
+                DrawRectangleRounded(
+                    { (float)(stCbX + 3), (float)(stItemY + 5), (float)(stCbSz - 6), (float)(stCbSz - 6) },
+                    0.25f, 8, AT_GREEN);
+            }
+
+            if (atClickIn(stCbR))
+            {
+                atSubtaskDone[stIndex] = !atSubtaskDone[stIndex];
+                updateSubtaskCompleted(atSubtaskIds[stIndex], atSubtaskDone[stIndex]);
+            }
+
+            Color stTitleColor = atSubtaskDone[stIndex] ? AT_DARK : AT_WHITE;
+            DrawText(atSubtaskTitles[stIndex], stCbX + stCbSz + 10, stItemY + 2, 14, stTitleColor);
+
+            int stDelX = panelX + panelW - 28;
+            Rectangle stDelR = { (float)stDelX, (float)(stItemY + 2), 18.0f, 18.0f };
+            bool stDelHov    = atHoverIn(stDelR);
+            DrawText("x", stDelX + 3, stItemY + 3, 13, stDelHov ? AT_RED : AT_DARK);
+
+            if (atClickIn(stDelR))
+            {
+                deleteSubtask(atSubtaskIds[stIndex]);
+
+                int sk = stIndex;
+                while (sk < atSubtaskCount - 1)
+                {
+                    atSubtaskIds[sk]  = atSubtaskIds[sk + 1];
+                    atSubtaskDone[sk] = atSubtaskDone[sk + 1];
+                    int ck = 0;
+                    while (atSubtaskTitles[sk + 1][ck] != '\0' && ck < 63)
+                    {
+                        atSubtaskTitles[sk][ck] = atSubtaskTitles[sk + 1][ck];
+                        ck = ck + 1;
+                    }
+                    atSubtaskTitles[sk][ck] = '\0';
+                    sk = sk + 1;
+                }
+                atSubtaskCount = atSubtaskCount - 1;
+            }
+
+            stIndex = stIndex + 1;
+        }
+
+        int stAddY = stStartY + atSubtaskCount * 30 + 4;
+        int stAddW = panelW - 32;
+        Rectangle stAddR = { (float)(panelX + 16), (float)stAddY, (float)stAddW, 30.0f };
+
+        if (atClickIn(stAddR))
+        {
+            atSubtaskInputFocused  = true;
+            atSearchFocused        = false;
+            atIsEditingDescription = false;
+        }
+        else if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !atHoverIn(stAddR))
+        {
+            atSubtaskInputFocused = false;
+        }
+
+        Color stAddBg     = atSubtaskInputFocused ? AT_PANEL_LT : AT_PANEL;
+        Color stAddBorder = atSubtaskInputFocused ? AT_ORANGE   : AT_BORDER;
+        DrawRectangleRounded(stAddR, 0.25f, 8, stAddBg);
+        DrawRectangleRoundedLines(stAddR, 0.25f, 8, 1.5f, stAddBorder);
+
+        int stNewLen = textLength(atSubtaskNewTitle);
+        if (stNewLen == 0 && !atSubtaskInputFocused)
+        {
+            DrawText("+ Add subtask...", panelX + 28, stAddY + 7, 13, AT_DARK);
+        }
+        else
+        {
+            DrawText(atSubtaskNewTitle, panelX + 28, stAddY + 7, 13, AT_WHITE);
+        }
+
+        if (atSubtaskInputFocused == true && !atShowAddModal)
+        {
+            int typedChar = GetCharPressed();
+            while (typedChar > 0)
+            {
+                if (typedChar >= 32 && typedChar <= 126 && stNewLen < 63)
+                {
+                    atSubtaskNewTitle[stNewLen] = (char)typedChar;
+                    stNewLen                    = stNewLen + 1;
+                    atSubtaskNewTitle[stNewLen] = '\0';
+                }
+                typedChar = GetCharPressed();
+            }
+            if (IsKeyPressed(KEY_BACKSPACE) && stNewLen > 0)
+            {
+                atSubtaskNewTitle[stNewLen - 1] = '\0';
+            }
+            if (IsKeyPressed(KEY_ENTER) && stNewLen > 0 && atSubtaskCount < AT_MAX_SUBTASKS)
+            {
+                int newSubtaskId = saveSubtask(t.id, atSubtaskNewTitle);
+                if (newSubtaskId > 0)
+                {
+                    atSubtaskIds[atSubtaskCount]  = newSubtaskId;
+                    copyText(atSubtaskTitles[atSubtaskCount], atSubtaskNewTitle);
+                    atSubtaskDone[atSubtaskCount] = false;
+                    atSubtaskCount                = atSubtaskCount + 1;
+                    atSubtaskNewTitle[0]          = '\0';
+                }
+            }
+        }
+
+        int divider2Y = stAddY + 36;
+        DrawRectangle(panelX + 16, divider2Y, panelW - 32, 1, AT_BORDER);
+
+        int timerRowY = divider2Y + 10;
+        DrawText("Time spent", panelX + 16, timerRowY + 6, 14, AT_GREY);
+
+        char timerBuf[16] = {};
+        atFormatTimer(atTimerSeconds[taskIdx], timerBuf);
+        DrawText(timerBuf, panelX + 130, timerRowY + 2, 20, AT_WHITE);
+
+        bool        timerIsRunning = atTimerRunning[taskIdx];
+        const char* timerBtnLabel  = timerIsRunning ? "Pause" : "Start";
+        int         timerBtnX      = panelX + panelW - 196;
+
+        if (atDrawSmallBtn(timerBtnLabel, timerBtnX, timerRowY, 80, 30))
+        {
+            atTimerRunning[taskIdx] = !atTimerRunning[taskIdx];
+        }
+        if (atDrawGhostBtn("Reset", timerBtnX + 88, timerRowY, 70, 30))
+        {
+            atTimerRunning[taskIdx] = false;
+            atTimerSeconds[taskIdx] = 0.0f;
         }
 
         totalHeight = rowH + 2 + panelH + 6;
@@ -1380,6 +1624,10 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
             atFadeTimer[i] = atFadeTimer[i] - dt;
             if (atFadeTimer[i] < 0.0f)
                 atFadeTimer[i] = 0.0f;
+        }
+        if (atTimerRunning[i] == true && tasks[i].completed == false)
+        {
+            atTimerSeconds[i] = atTimerSeconds[i] + dt;
         }
         i = i + 1;
     }
