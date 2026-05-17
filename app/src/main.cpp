@@ -12,7 +12,6 @@ int WINDOW_H = 950;
 
 int main(void)
 {
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(WINDOW_W, WINDOW_H, "MindForge");
     SetTargetFPS(60);
 

@@ -52,6 +52,10 @@ static int   atNewRepeatType     = 0;
 static char  atNewRepeatDays[8]  = {};
 static int   atNewCategoryIndex  = -1;
 static int   atSortMode          = 0;
+static bool  atFilterDropOpen       = false;
+static bool  atSortDropOpen         = false;
+static bool  atFilterDropJustOpened = false;
+static bool  atSortDropJustOpened   = false;
 
 static int   atExpandedTaskIndex       = -1;
 static bool  atIsEditingDescription    = false;
@@ -59,6 +63,22 @@ static char  atDescriptionEditBuffer[512] = {};
 
 static const char* AT_PRIO_LABEL[] = { "?", "Low", "Med", "High" };
 static Color       AT_PRIO_COLOR[] = { AT_GREY, AT_GREEN, AT_ORANGE_LT, AT_RED };
+
+struct AtConfettiParticle
+{
+    float x;
+    float y;
+    float vx;
+    float vy;
+    float lifetime;
+    Color color;
+    int   pieceW;
+    int   pieceH;
+};
+
+static const int AT_MAX_CONFETTI = 200;
+static AtConfettiParticle atConfettiParticles[AT_MAX_CONFETTI] = {};
+static int atConfettiCount = 0;
 
 static int atParseToDay(const char* s)
 {
@@ -162,6 +182,98 @@ static void atBumpStreakOnComplete()
         atStreak = 1;
     }
     atLastCompleteDay = today;
+}
+
+static void atSpawnConfetti(int centerX, int centerY)
+{
+    Color confettiColors[6] = {
+        { 234, 108,  15, 255 },
+        {  80, 200, 100, 255 },
+        {  90, 140, 220, 255 },
+        { 251, 146,  60, 255 },
+        { 220,  80,  60, 255 },
+        { 255, 220,  80, 255 }
+    };
+
+    int particlesToSpawn = 40;
+    int spawnIndex = 0;
+    while (spawnIndex < particlesToSpawn)
+    {
+        if (atConfettiCount >= AT_MAX_CONFETTI)
+        {
+            break;
+        }
+
+        AtConfettiParticle p = {};
+        p.x = (float)centerX;
+        p.y = (float)centerY;
+
+        int speedX = GetRandomValue(-200, 200);
+        int speedY = GetRandomValue(-340, -100);
+        p.vx = (float)speedX;
+        p.vy = (float)speedY;
+
+        p.lifetime = 1.0f;
+
+        int colorIndex = GetRandomValue(0, 5);
+        p.color = confettiColors[colorIndex];
+
+        int sizeChoice = GetRandomValue(0, 1);
+        if (sizeChoice == 0)
+        {
+            p.pieceW = 7;
+            p.pieceH = 3;
+        }
+        else
+        {
+            p.pieceW = 3;
+            p.pieceH = 7;
+        }
+
+        atConfettiParticles[atConfettiCount] = p;
+        atConfettiCount = atConfettiCount + 1;
+
+        spawnIndex = spawnIndex + 1;
+    }
+}
+
+static void atUpdateAndDrawConfetti(float dt)
+{
+    float gravity = 420.0f;
+    int alive = 0;
+    int i = 0;
+
+    while (i < atConfettiCount)
+    {
+        AtConfettiParticle p = atConfettiParticles[i];
+
+        p.vy       = p.vy + gravity * dt;
+        p.x        = p.x + p.vx * dt;
+        p.y        = p.y + p.vy * dt;
+        p.lifetime = p.lifetime - dt * 0.8f;
+
+        if (p.lifetime > 0.0f)
+        {
+            unsigned char alpha = 255;
+            if (p.lifetime < 0.3f)
+            {
+                float fadeRatio = p.lifetime / 0.3f;
+                alpha = (unsigned char)(255.0f * fadeRatio);
+            }
+
+            Color drawColor = p.color;
+            drawColor.a     = alpha;
+
+            DrawRectangle((int)p.x, (int)p.y, p.pieceW, p.pieceH, drawColor);
+
+            atConfettiParticles[alive] = p;
+            alive = alive + 1;
+        }
+
+        i = i + 1;
+    }
+
+    atConfettiCount = alive;
 }
 
 static void atLower(const char* in, char* out, int outMax)
@@ -288,6 +400,160 @@ static bool atDrawGhostBtn(const char* label, int x, int y, int w, int h)
     DrawText(label, x + w / 2 - tw / 2, y + h / 2 - fs / 2, fs,
              hov ? AT_ORANGE_LT : AT_GREY);
     return atClickIn(r);
+}
+
+static bool atDrawDropBtn(const char* label, int x, int y, int w, int h, bool isOpen)
+{
+    Rectangle r        = { (float)x, (float)y, (float)w, (float)h };
+    bool isHovered     = atHoverIn(r);
+    bool isHighlighted = (isOpen == true || isHovered == true);
+
+    Color backgroundColor = AT_PANEL;
+    if (isHighlighted == true)
+    {
+        backgroundColor = AT_PANEL_LT;
+    }
+
+    Color borderColor = AT_BORDER;
+    if (isHighlighted == true)
+    {
+        borderColor = AT_ORANGE_LT;
+    }
+
+    Color textColor = AT_GREY;
+    if (isHighlighted == true)
+    {
+        textColor = AT_WHITE;
+    }
+
+    DrawRectangleRounded(r, 0.3f, 8, backgroundColor);
+    DrawRectangleRoundedLines(r, 0.3f, 8, 1.5f, borderColor);
+    DrawText(label, x + 14, y + h / 2 - 8, 16, textColor);
+    DrawText("v", x + w - 20, y + h / 2 - 8, 14, textColor);
+
+    return atClickIn(r);
+}
+
+static void atDrawFilterDropdown(int x, int y, int panelW)
+{
+    int itemH  = 36;
+    int panelH = ATF_COUNT * itemH + 8;
+
+    Rectangle panelRectangle = { (float)x, (float)y, (float)panelW, (float)panelH };
+
+    DrawRectangleRounded(panelRectangle, 0.12f, 8, AT_PANEL_LT);
+    DrawRectangleRoundedLines(panelRectangle, 0.12f, 8, 1.5f, AT_BORDER);
+
+    int itemIndex = 0;
+    while (itemIndex < ATF_COUNT)
+    {
+        int itemY = y + 4 + itemIndex * itemH;
+        Rectangle itemRectangle = { (float)(x + 4), (float)itemY, (float)(panelW - 8), (float)(itemH - 2) };
+
+        bool itemIsActive  = (atFilter == itemIndex);
+        bool itemIsHovered = atHoverIn(itemRectangle);
+
+        if (itemIsActive == true)
+        {
+            DrawRectangleRounded(itemRectangle, 0.25f, 8, AT_ORANGE);
+        }
+        else if (itemIsHovered == true)
+        {
+            DrawRectangleRounded(itemRectangle, 0.25f, 8, AT_PANEL);
+        }
+
+        Color itemTextColor = AT_GREY;
+        if (itemIsActive == true || itemIsHovered == true)
+        {
+            itemTextColor = AT_WHITE;
+        }
+
+        DrawText(AT_FILTER_LABELS[itemIndex], x + 16, itemY + itemH / 2 - 8, 16, itemTextColor);
+
+        if (atClickIn(itemRectangle) == true)
+        {
+            atFilter         = (AT_Filter)itemIndex;
+            atFilterDropOpen = false;
+        }
+
+        itemIndex = itemIndex + 1;
+    }
+
+    if (atFilterDropJustOpened == true)
+    {
+        atFilterDropJustOpened = false;
+    }
+    else
+    {
+        bool mouseClickedThisFrame = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+        bool clickWasInsidePanel   = CheckCollisionPointRec(GetMousePosition(), panelRectangle);
+        if (mouseClickedThisFrame == true && clickWasInsidePanel == false)
+        {
+            atFilterDropOpen = false;
+        }
+    }
+}
+
+static void atDrawSortDropdown(int x, int y, int panelW)
+{
+    const char* sortOptionLabels[4] = { "Deadline", "Priority", "Title", "Duration" };
+    int sortOptionCount = 4;
+    int itemH           = 36;
+    int panelH          = sortOptionCount * itemH + 8;
+
+    Rectangle panelRectangle = { (float)x, (float)y, (float)panelW, (float)panelH };
+
+    DrawRectangleRounded(panelRectangle, 0.12f, 8, AT_PANEL_LT);
+    DrawRectangleRoundedLines(panelRectangle, 0.12f, 8, 1.5f, AT_BORDER);
+
+    int itemIndex = 0;
+    while (itemIndex < sortOptionCount)
+    {
+        int itemY = y + 4 + itemIndex * itemH;
+        Rectangle itemRectangle = { (float)(x + 4), (float)itemY, (float)(panelW - 8), (float)(itemH - 2) };
+
+        bool itemIsActive  = (atSortMode == itemIndex);
+        bool itemIsHovered = atHoverIn(itemRectangle);
+
+        if (itemIsActive == true)
+        {
+            DrawRectangleRounded(itemRectangle, 0.25f, 8, AT_ORANGE);
+        }
+        else if (itemIsHovered == true)
+        {
+            DrawRectangleRounded(itemRectangle, 0.25f, 8, AT_PANEL);
+        }
+
+        Color itemTextColor = AT_GREY;
+        if (itemIsActive == true || itemIsHovered == true)
+        {
+            itemTextColor = AT_WHITE;
+        }
+
+        DrawText(sortOptionLabels[itemIndex], x + 16, itemY + itemH / 2 - 8, 16, itemTextColor);
+
+        if (atClickIn(itemRectangle) == true)
+        {
+            atSortMode     = itemIndex;
+            atSortDropOpen = false;
+        }
+
+        itemIndex = itemIndex + 1;
+    }
+
+    if (atSortDropJustOpened == true)
+    {
+        atSortDropJustOpened = false;
+    }
+    else
+    {
+        bool mouseClickedThisFrame = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+        bool clickWasInsidePanel   = CheckCollisionPointRec(GetMousePosition(), panelRectangle);
+        if (mouseClickedThisFrame == true && clickWasInsidePanel == false)
+        {
+            atSortDropOpen = false;
+        }
+    }
 }
 
 static void atDrawSearchBox(int x, int y, int w, int h)
@@ -571,6 +837,7 @@ static int atDrawTaskRow(int taskIdx, int x, int y, int w, float alpha, bool isE
         atBumpStreakOnComplete();
         updateTaskCompleted(t.id, true);
         atSpawnRepeatCopy(t);
+        atSpawnConfetti(doneX + doneSz / 2, doneY + doneSz / 2);
     }
     else if (atClickIn(doneR) && t.completed)
     {
@@ -970,17 +1237,44 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
     if (atDrawSmallBtn("+ New Task", addBtnX, addBtnY, addBtnW, addBtnH))
         atOpenAddModal();
 
-    int pillY = margin + 64;
-    int pillH = 32;
-    int px    = innerX;
-    int i     = 0;
-    while (i < ATF_COUNT)
+    int pillY    = margin + 64;
+    int pillH    = 32;
+    int dropBtnW = 160;
+
+    char filterBtnLabel[64] = {};
+    int filterLabelPos = 0;
+    filterLabelPos = appendText(filterBtnLabel, filterLabelPos, "Filter: ");
+    filterLabelPos = appendText(filterBtnLabel, filterLabelPos, AT_FILTER_LABELS[atFilter]);
+
+    const char* sortOptionLabels[4] = { "Deadline", "Priority", "Title", "Duration" };
+    char sortBtnLabel[64] = {};
+    int sortLabelPos = 0;
+    sortLabelPos = appendText(sortBtnLabel, sortLabelPos, "Sort: ");
+    sortLabelPos = appendText(sortBtnLabel, sortLabelPos, sortOptionLabels[atSortMode]);
+
+    int filterBtnX = innerX;
+    int sortBtnX   = innerX + dropBtnW + 8;
+
+    if (atDrawDropBtn(filterBtnLabel, filterBtnX, pillY, dropBtnW, pillH, atFilterDropOpen) == true)
     {
-        int w = 0;
-        if (atDrawPill(AT_FILTER_LABELS[i], px, pillY, pillH, atFilter == i, &w))
-            atFilter = (AT_Filter)i;
-        px = px + w + 8;
-        i  = i + 1;
+        bool wasOpen     = atFilterDropOpen;
+        atFilterDropOpen = !atFilterDropOpen;
+        atSortDropOpen   = false;
+        if (wasOpen == false)
+        {
+            atFilterDropJustOpened = true;
+        }
+    }
+
+    if (atDrawDropBtn(sortBtnLabel, sortBtnX, pillY, dropBtnW, pillH, atSortDropOpen) == true)
+    {
+        bool wasOpen   = atSortDropOpen;
+        atSortDropOpen = !atSortDropOpen;
+        atFilterDropOpen = false;
+        if (wasOpen == false)
+        {
+            atSortDropJustOpened = true;
+        }
     }
 
     int viewBtnW = 96;
@@ -990,28 +1284,13 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
     if (atDrawPill("Heatmap", viewX + viewBtnW + 8, pillY, pillH, atView == ATV_HEATMAP, nullptr))
         atView = ATV_HEATMAP;
 
-    int sortPillY = pillY + pillH + 8;
-    int sortPillH = 28;
-    int sortPillX = innerX;
-
-    const char* sortLabels[4] = { "Deadline", "Priority", "Title", "Duration" };
-    int sortIndex = 0;
-    while (sortIndex < 4)
-    {
-        int sortPillW = 0;
-        if (atDrawPill(sortLabels[sortIndex], sortPillX, sortPillY, sortPillH, atSortMode == sortIndex, &sortPillW))
-            atSortMode = sortIndex;
-        sortPillX = sortPillX + sortPillW + 8;
-        sortIndex = sortIndex + 1;
-    }
-
-    int searchY = sortPillY + sortPillH + 12;
+    int searchY = pillY + pillH + 12;
     atDrawSearchBox(innerX, searchY, innerW - 280, 38);
 
     Task* tasks      = getTaskStore();
     int   taskCount  = getTaskCount();
     int   quickCount = 0;
-    i = 0;
+    int   i          = 0;
     while (i < taskCount)
     {
         if (!tasks[i].completed && atIsQuick(tasks[i].duration))
@@ -1058,7 +1337,11 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
         int bw = 130, bh = 32;
         int bx = innerX + innerW - bw * 4 - 24;
         int by = bulkY + bulkH / 2 - bh / 2;
-        if (atDrawSmallBtn("Mark Done",  bx,                by, bw, bh)) atBulkMarkDone();
+        if (atDrawSmallBtn("Mark Done",  bx,                by, bw, bh))
+        {
+            atBulkMarkDone();
+            atSpawnConfetti(bx + bw / 2, by + bh / 2);
+        }
         if (atDrawSmallBtn("Snooze +1d", bx + (bw + 8),     by, bw, bh)) atBulkSnooze();
         if (atDrawSmallBtn("Delete",     bx + (bw + 8) * 2, by, bw, bh, true)) atBulkDelete();
         if (atDrawGhostBtn("Cancel",     bx + (bw + 8) * 3, by, bw, bh)) atClearSelection();
@@ -1283,6 +1566,18 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
                        cellW, cellH,
                        "Procrastination graveyard",
                        "low urgency · high effort", AT_RED_DIM, q[3], qn[3]);
+    }
+
+    atUpdateAndDrawConfetti(dt);
+
+    int dropdownY = pillY + pillH + 4;
+    if (atFilterDropOpen == true)
+    {
+        atDrawFilterDropdown(filterBtnX, dropdownY, dropBtnW);
+    }
+    if (atSortDropOpen == true)
+    {
+        atDrawSortDropdown(sortBtnX, dropdownY, dropBtnW);
     }
 
     if (atShowAddModal)
