@@ -76,9 +76,11 @@ static Color parseHexColor(const char* hexString)
     int greenValue = 0;
     int blueValue  = 0;
 
-    sscanf(redChars,   "%x", &redValue);
-    sscanf(greenChars, "%x", &greenValue);
-    sscanf(blueChars,  "%x", &blueValue);
+    int scanResult = 0;
+    scanResult = sscanf(redChars,   "%x", &redValue);
+    scanResult = sscanf(greenChars, "%x", &greenValue);
+    scanResult = sscanf(blueChars,  "%x", &blueValue);
+    (void)scanResult;
 
     resultColor.r = (unsigned char)redValue;
     resultColor.g = (unsigned char)greenValue;
@@ -172,6 +174,7 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
     }
 
     int statisticsButtonY = tasksButtonY + BTN_H + BTN_GAP + dropdownTotalH;
+    int archiveButtonY    = statisticsButtonY + BTN_H + BTN_GAP;
 
     Rectangle dashboardArea = { (float)BTN_X, (float)dashboardButtonY, (float)BTN_W, (float)BTN_H };
     bool mouseOverDashboard = CheckCollisionPointRec(mousePosition, dashboardArea);
@@ -462,6 +465,15 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
     }
     bool statsIsActive = (current == SCREEN_STATISTICS);
     drawOneButton("Statistics", BTN_X, statisticsButtonY, BTN_W, BTN_H, statsIsActive, mouseOverStatistics);
+
+    Rectangle archiveArea = { (float)BTN_X, (float)archiveButtonY, (float)BTN_W, (float)BTN_H };
+    bool mouseOverArchive = CheckCollisionPointRec(mousePosition, archiveArea);
+    if (mouseOverArchive == true)
+    {
+        *outHovered = SCREEN_ARCHIVE;
+    }
+    bool archiveIsActive = (current == SCREEN_ARCHIVE);
+    drawOneButton("Archive", BTN_X, archiveButtonY, BTN_W, BTN_H, archiveIsActive, mouseOverArchive);
 
     DrawRectangle(20, screenHeight - 180, SIDEBAR_W - 40, 1, COLOR_DIVIDER);
 

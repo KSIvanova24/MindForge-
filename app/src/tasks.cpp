@@ -23,11 +23,11 @@ static const Color AT_RED_DIM   = { 120,  40,  30, 255 };
 static const Color AT_GREEN     = {  80, 200, 100, 255 };
 static const Color AT_BLUE      = {  90, 140, 220, 255 };
 
-enum AT_Filter { ATF_ALL = 0, ATF_ACTIVE, ATF_DONE, ATF_OVERDUE, ATF_HIGHPRI, ATF_COUNT };
+enum AT_Filter { ATF_ALL = 0, ATF_ACTIVE, ATF_OVERDUE, ATF_HIGHPRI, ATF_COUNT };
 enum AT_View   { ATV_LIST = 0, ATV_HEATMAP };
 
 static const char* AT_FILTER_LABELS[ATF_COUNT] = {
-    "All", "Active", "Done", "Overdue", "High Priority"
+    "All", "Active", "Overdue", "High Priority"
 };
 
 static bool  atSelected[MAX_TASKS]  = {};
@@ -358,11 +358,9 @@ static bool atMatchesFilter(const Task& t)
 {
     int days = atDaysFromToday(t.deadline);
     if (atFilter == ATF_ALL)
-        return true;
+        return !t.completed;
     if (atFilter == ATF_ACTIVE)
         return !t.completed;
-    if (atFilter == ATF_DONE)
-        return t.completed;
     if (atFilter == ATF_OVERDUE)
         return !t.completed && days < 0;
     if (atFilter == ATF_HIGHPRI)
@@ -378,15 +376,13 @@ static bool atMatchesCategory(const Task& t)
     return textsAreEqual(t.categoryName, filter);
 }
 
-enum AT_Group { ATG_OVERDUE, ATG_TODAY, ATG_WEEK, ATG_LATER, ATG_DONE, ATG_COUNT };
+enum AT_Group { ATG_OVERDUE, ATG_TODAY, ATG_WEEK, ATG_LATER, ATG_COUNT };
 static const char* AT_GROUP_LABELS[ATG_COUNT] = {
-    "Overdue", "Today", "This Week", "Later", "Done"
+    "Overdue", "Today", "This Week", "Later"
 };
 
 static AT_Group atGroupFor(const Task& t)
 {
-    if (t.completed)
-        return ATG_DONE;
     int d = atDaysFromToday(t.deadline);
     if (d < 0)  return ATG_OVERDUE;
     if (d == 0) return ATG_TODAY;
@@ -1605,7 +1601,7 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
         if (!atMatchesFilter(tasks[i]))     { i = i + 1; continue; }
         if (!atMatchesSearch(tasks[i]))     { i = i + 1; continue; }
         if (!atMatchesCategory(tasks[i]))   { i = i + 1; continue; }
-        if (tasks[i].completed && atFadeTimer[i] == 0.0f && atFilter == ATF_ACTIVE)
+        if (tasks[i].completed && atFadeTimer[i] == 0.0f)
         {
             i = i + 1;
             continue;
@@ -1712,7 +1708,6 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
 
             Color hcol = AT_ORANGE_LT;
             if (g == ATG_OVERDUE) hcol = AT_RED;
-            if (g == ATG_DONE)    hcol = AT_DARK;
             char hdr[64] = {};
             int hdrPos = 0;
             hdrPos = appendText(hdr, hdrPos, AT_GROUP_LABELS[g]);
@@ -1728,12 +1723,9 @@ void drawAllTasksScreen(int contentX, int contentWidth, int screenHeight)
             {
                 int idx    = buckets[g][k];
                 float alpha = 1.0f;
-                if (tasks[idx].completed)
+                if (tasks[idx].completed && atFadeTimer[idx] > 0.0f)
                 {
-                    if (atFadeTimer[idx] > 0.0f)
-                        alpha = atFadeTimer[idx];
-                    else if (atFilter == ATF_ALL)
-                        alpha = 0.45f;
+                    alpha = atFadeTimer[idx];
                 }
                 bool isExpanded = (idx == atExpandedTaskIndex);
                 int rh = atDrawTaskRow(idx, innerX, curY, innerW, alpha, isExpanded);
