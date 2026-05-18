@@ -16,6 +16,7 @@ set(SOURCES
     src/profile.cpp
     src/statistics.cpp
     src/archive.cpp
+    src/calendar.cpp
     src/accounts.cpp
     src/db.cpp
     src/data.cpp

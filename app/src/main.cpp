@@ -1,6 +1,7 @@
 #include "../include/presentation.h"
 #include "../include/screens/login.h"
 #include "../include/screens/archive.h"
+#include "../include/screens/calendar.h"
 
 extern int SIDEBAR_W;
 extern int BTN_H;
@@ -48,6 +49,7 @@ int main(void)
             case SCREEN_DASHBOARD:  drawDashboardScreen(contentX, contentW, sh); break;
             case SCREEN_ALL_TASKS:  drawAllTasksScreen(contentX, contentW, sh); break;
             case SCREEN_ARCHIVE:    drawArchiveScreen(contentX, contentW, sh); break;
+            case SCREEN_CALENDAR:   drawCalendarScreen(contentX, contentW, sh); break;
             case SCREEN_STATISTICS: drawStatisticsScreen(contentX, contentW, sh); break;
             case SCREEN_PROFILE:    drawProfileScreen(contentX, contentW, sh); break;
             case SCREEN_SETTINGS:   drawSettingsScreen(contentX, contentW, sh, &accountDeletedLogout); break;

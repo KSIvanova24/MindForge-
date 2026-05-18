@@ -4,6 +4,8 @@
 #include "../include/data.h"
 #include "../include/screens/dashboard.h"
 #include "../include/screens/tasks.h"
+#include "../include/screens/archive.h"
+#include "../include/screens/calendar.h"
 #include "../include/screens/statistics.h"
 #include "../include/screens/profile.h"
 #include "../include/screens/login.h"
@@ -175,6 +177,7 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
 
     int statisticsButtonY = tasksButtonY + BTN_H + BTN_GAP + dropdownTotalH;
     int archiveButtonY    = statisticsButtonY + BTN_H + BTN_GAP;
+    int calendarButtonY   = archiveButtonY + BTN_H + BTN_GAP;
 
     Rectangle dashboardArea = { (float)BTN_X, (float)dashboardButtonY, (float)BTN_W, (float)BTN_H };
     bool mouseOverDashboard = CheckCollisionPointRec(mousePosition, dashboardArea);
@@ -362,12 +365,12 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
                 int circleX = inputBoxX + 14 + colorIndex * colorCircleSpacing;
 
                 Color circleColor = parseHexColor(colorChoices[colorIndex]);
-                DrawCircle(circleX, colorCircleY + colorCircleRadius, colorCircleRadius, circleColor);
+                DrawCircle((float)circleX, (float)(colorCircleY + colorCircleRadius), (float)colorCircleRadius, circleColor);
 
                 bool thisColorIsSelected = (s_newCategoryColorIndex == colorIndex);
                 if (thisColorIsSelected == true)
                 {
-                    DrawCircleLines(circleX, colorCircleY + colorCircleRadius, colorCircleRadius + 2, COLOR_WHITE);
+                    DrawCircleLines((float)circleX, (float)(colorCircleY + colorCircleRadius), (float)(colorCircleRadius + 2), COLOR_WHITE);
                 }
 
                 Vector2 mousePos   = GetMousePosition();
@@ -474,6 +477,15 @@ void drawSidebar(AppScreen current, AppScreen* outHovered, int screenHeight)
     }
     bool archiveIsActive = (current == SCREEN_ARCHIVE);
     drawOneButton("Archive", BTN_X, archiveButtonY, BTN_W, BTN_H, archiveIsActive, mouseOverArchive);
+
+    Rectangle calendarArea = { (float)BTN_X, (float)calendarButtonY, (float)BTN_W, (float)BTN_H };
+    bool mouseOverCalendar = CheckCollisionPointRec(mousePosition, calendarArea);
+    if (mouseOverCalendar == true)
+    {
+        *outHovered = SCREEN_CALENDAR;
+    }
+    bool calendarIsActive = (current == SCREEN_CALENDAR);
+    drawOneButton("Calendar", BTN_X, calendarButtonY, BTN_W, BTN_H, calendarIsActive, mouseOverCalendar);
 
     DrawRectangle(20, screenHeight - 180, SIDEBAR_W - 40, 1, COLOR_DIVIDER);
 
