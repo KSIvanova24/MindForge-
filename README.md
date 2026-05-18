@@ -75,6 +75,11 @@ MindForge helps you:
 </p>
 
 ---
+## 📃 Documentation and Presentation <a name="docs"></a>
+
+- 📄 Documentation – 📎 [Open document]()
+- 📊 Presentation – 🎞️ [View presentation](Documentation/Taskdash.pptx)
+
 
 ## ⚙️ Installation and Setup <a name="install"></a>
 
